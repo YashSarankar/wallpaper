@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   font-family: 'Plus Jakarta Sans', sans-serif;
   line-height: 1.5;
@@ -39,6 +43,7 @@ body {
 .gradient-text {
   background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -83,7 +88,8 @@ body {
   background: rgba(255, 255, 255, 0.2);
 }
 
-input, select {
+input,
+select {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
@@ -94,7 +100,8 @@ input, select {
   transition: all 0.2s;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   border-color: #6366f1;
   background: rgba(255, 255, 255, 0.08);
 }
