@@ -14,8 +14,15 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL + '/wallpapers';
-const AUTH_URL = import.meta.env.VITE_API_URL + '/auth/login';
+// Smart URL management
+const getBaseUrl = () => {
+    let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    return url.endsWith('/wallpapers') ? url.replace('/wallpapers', '') : url;
+};
+
+const BASE_API = getBaseUrl();
+const API_BASE_URL = `${BASE_API}/wallpapers`;
+const AUTH_URL = `${BASE_API}/auth/login`;
 
 // Axios interceptor to add the token to every request
 axios.interceptors.request.use(
