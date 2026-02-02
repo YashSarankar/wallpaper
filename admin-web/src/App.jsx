@@ -20,7 +20,7 @@ const Dashboard = () => {
     const [wallpapers, setWallpapers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
-    const [viewMode, setViewMode] = useState('database'); // 'database' or 'storage'
+    const [searchTerm, setSearchTerm] = useState('');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
 
@@ -32,13 +32,10 @@ const Dashboard = () => {
     const [message, setMessage] = useState(null);
 
     const categories = ['Nature', 'Space', 'Game', 'Anime', 'Animal', 'Abstract'];
+
     useEffect(() => {
-        if (viewMode === 'database') {
-            fetchWallpapers();
-        } else {
-            fetchStorageFiles();
-        }
-    }, [viewMode]);
+        fetchWallpapers();
+    }, []);
 
     const fetchWallpapers = async () => {
         try {
@@ -52,17 +49,10 @@ const Dashboard = () => {
         }
     };
 
-    const fetchStorageFiles = async () => {
-        try {
-            setLoading(true);
-            const res = await axios.get(`${API_BASE_URL}/storage-sync`);
-            setWallpapers(res.data);
-        } catch (err) {
-            console.error('Failed to sync storage:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const filteredWallpapers = wallpapers.filter(wp =>
+        wp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        wp.category?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
     const handleDrag = (e) => {
         e.preventDefault();
@@ -249,31 +239,22 @@ const Dashboard = () => {
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <ImageIcon size={20} className={viewMode === 'database' ? 'text-purple-400' : 'text-orange-400'} />
-                                    {viewMode === 'database' ? 'Live Gallery' : 'GCS Storage'}
+                                    <ImageIcon size={20} className="text-purple-400" />
+                                    Live Gallery
                                 </h2>
-
-                                <div className="flex bg-white/5 p-1 rounded-xl glass">
-                                    <button
-                                        onClick={() => setViewMode('database')}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'database' ? 'bg-indigo-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
-                                    >
-                                        Database
-                                    </button>
-                                    <button
-                                        onClick={() => setViewMode('storage')}
-                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'storage' ? 'bg-orange-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
-                                    >
-                                        Storage
-                                    </button>
-                                </div>
                             </div>
                             <div className="relative w-full sm:w-64">
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-                                <input type="text" placeholder="Search title..." className="pl-10 text-sm py-2" />
+                                <input
+                                    type="text"
+                                    placeholder="Search title or category..."
+                                    className="pl-10 text-sm py-2"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                             </div>
                         </div>
-                        {/* test */}
+
                         {loading ? (
                             <div className="flex flex-col items-center justify-center h-[400px] text-white/20">
                                 <RefreshCw size={40} className="animate-spin mb-4" />
@@ -281,7 +262,7 @@ const Dashboard = () => {
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                                {wallpapers.map((wp) => (
+                                {filteredWallpapers.map((wp) => (
                                     <motion.div
                                         layout
                                         initial={{ opacity: 0 }}
