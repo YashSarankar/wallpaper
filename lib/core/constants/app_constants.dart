@@ -15,5 +15,5 @@ class AppConstants {
 
   // Remote Config (Example URL, replace with actual)
   static const String remoteWallpaperJsonUrl =
-      'http://192.168.29.105:5000/api/wallpapers';
+      'https://wallpaper-api-i7tm.onrender.com/api/wallpapers';
 }
