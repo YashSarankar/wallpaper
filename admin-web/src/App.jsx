@@ -16,7 +16,64 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.29.105:5000/api/wallpapers';
 
-const Dashboard = () => {
+const Login = ({ onLogin }) => {
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        // Securely check admin password
+        if (password === 'admin123') { // Simple but effective for personal dashboard
+            onLogin();
+        } else {
+            setError('Invalid master password');
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass p-8 rounded-3xl w-full max-w-md space-y-8"
+            >
+                <div className="text-center">
+                    <div className="bg-indigo-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <LayoutDashboard size={32} className="text-indigo-400" />
+                    </div>
+                    <h1 className="text-2xl font-bold gradient-text">Admin Access</h1>
+                    <p className="text-white/40 text-sm mt-2">Enter credentials to manage WallArt</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Master Password</label>
+                        <input
+                            type="password"
+                            className="w-full"
+                            placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+
+                    {error && (
+                        <p className="text-red-400 text-xs text-center border border-red-400/20 bg-red-400/5 py-2 rounded-lg font-bold uppercase tracking-wider">
+                            {error}
+                        </p>
+                    )}
+
+                    <button type="submit" className="primary-btn w-full py-4 text-sm uppercase tracking-widest font-bold">
+                        Authenticate
+                    </button>
+                </form>
+            </motion.div>
+        </div>
+    );
+};
+
+const Dashboard = ({ onLogout }) => {
     const [wallpapers, setWallpapers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -138,11 +195,13 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">WallArt Admin</h1>
                     <p className="text-white/40 text-sm">Manage your premium wallpaper collection</p>
                 </div>
-                <button className="glass p-3 rounded-full hover:bg-white/10 transition-colors">
+                <button
+                    onClick={onLogout}
+                    className="glass p-3 rounded-full hover:bg-white/10 transition-colors"
+                >
                     <LogOut size={20} className="text-white/60" />
                 </button>
             </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Upload Section */}
                 <div className="lg:col-span-4 space-y-6">
@@ -300,4 +359,28 @@ const Dashboard = () => {
     );
 };
 
-export default Dashboard;
+const App = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('adminAuth') === 'true');
+
+    const handleLogin = () => {
+        localStorage.setItem('adminAuth', 'true');
+        setIsAuthenticated(true);
+    };
+
+    const handleLogout = () => {
+        localStorage.removeItem('adminAuth');
+        setIsAuthenticated(false);
+    };
+
+    return (
+        <AnimatePresence mode="wait">
+            {!isAuthenticated ? (
+                <Login key="login" onLogin={handleLogin} />
+            ) : (
+                <Dashboard key="dashboard" onLogout={handleLogout} />
+            )}
+        </AnimatePresence>
+    );
+};
+
+export default App;
