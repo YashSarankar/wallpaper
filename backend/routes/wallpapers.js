@@ -71,8 +71,12 @@ router.post('/', upload.single('image'), async (req, res) => {
         const wallpaper = await newWallpaper.save();
         res.json(wallpaper);
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        console.error('Upload Route Error:', err);
+        res.status(500).json({
+            msg: 'Server processing error',
+            error: err.message,
+            stack: process.env.NODE_ENV === 'production' ? null : err.stack
+        });
     }
 });
 
