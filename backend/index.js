@@ -10,7 +10,11 @@ connectDB();
 
 // Init Middleware
 app.use(express.json({ extended: false }));
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.get('/', (req, res) => {
     res.send('Wallpaper Backend API is running...');
