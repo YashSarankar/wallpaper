@@ -14,19 +14,41 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://192.168.29.105:5000/api/wallpapers';
+const API_BASE_URL = import.meta.env.VITE_API_URL + '/wallpapers';
+const AUTH_URL = import.meta.env.VITE_API_URL + '/auth/login';
+
+// Axios interceptor to add the token to every request
+axios.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('adminAuthToken');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
 
 const Login = ({ onLogin }) => {
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Securely check admin password
-        if (password === 'admin123') { // Simple but effective for personal dashboard
-            onLogin();
-        } else {
-            setError('Invalid master password');
+        setIsLoading(true);
+        setError('');
+
+        try {
+            const res = await axios.post(AUTH_URL, { username, password });
+            onLogin(res.data.token);
+        } catch (err) {
+            setError(err.response?.data?.msg || 'Authentication failed');
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -47,14 +69,25 @@ const Login = ({ onLogin }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
-                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Master Password</label>
+                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Username</label>
+                        <input
+                            type="text"
+                            className="w-full"
+                            placeholder="admin"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Password</label>
                         <input
                             type="password"
                             className="w-full"
                             placeholder="••••••••"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            autoFocus
                         />
                     </div>
 
@@ -64,8 +97,12 @@ const Login = ({ onLogin }) => {
                         </p>
                     )}
 
-                    <button type="submit" className="primary-btn w-full py-4 text-sm uppercase tracking-widest font-bold">
-                        Authenticate
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="primary-btn w-full py-4 text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-2"
+                    >
+                        {isLoading ? <RefreshCw className="animate-spin" size={18} /> : 'Authenticate'}
                     </button>
                 </form>
             </motion.div>
@@ -360,24 +397,38 @@ const Dashboard = ({ onLogout }) => {
 };
 
 const App = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(localStorage.getItem('adminAuth') === 'true');
+    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('adminAuthToken'));
 
-    const handleLogin = () => {
-        localStorage.setItem('adminAuth', 'true');
+    const handleLogin = (token) => {
+        localStorage.setItem('adminAuthToken', token);
         setIsAuthenticated(true);
     };
 
     const handleLogout = () => {
-        localStorage.removeItem('adminAuth');
+        localStorage.removeItem('adminAuthToken');
         setIsAuthenticated(false);
     };
 
     return (
         <AnimatePresence mode="wait">
             {!isAuthenticated ? (
-                <Login key="login" onLogin={handleLogin} />
+                <motion.div
+                    key="login"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <Login onLogin={handleLogin} />
+                </motion.div>
             ) : (
-                <Dashboard key="dashboard" onLogout={handleLogout} />
+                <motion.div
+                    key="dashboard"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <Dashboard onLogout={handleLogout} />
+                </motion.div>
             )}
         </AnimatePresence>
     );

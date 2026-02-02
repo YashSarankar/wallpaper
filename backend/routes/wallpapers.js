@@ -4,6 +4,7 @@ const Wallpaper = require('../models/Wallpaper');
 const multer = require('multer');
 const { processAndUploadImage } = require('../services/imageService');
 const { bucket } = require('../config/gcs');
+const auth = require('../middleware/auth');
 
 // Multer config for memory storage
 const upload = multer({
@@ -15,7 +16,7 @@ const upload = multer({
 
 // @route   GET /api/wallpapers/storage-sync
 // @desc    Get all files directly from GCS bucket
-router.get('/storage-sync', async (req, res) => {
+router.get('/storage-sync', auth, async (req, res) => {
     try {
         console.log(`Manual Sync requested for bucket: ${bucket ? bucket.name : 'NULL'}`);
         if (!bucket) {
@@ -86,8 +87,8 @@ router.get('/category/:category', async (req, res) => {
 
 // @route   POST /api/wallpapers
 // @desc    Add a new wallpaper (supports file upload)
-// @access  Public
-router.post('/', upload.single('image'), async (req, res) => {
+// @access  Private
+router.post('/', [auth, upload.single('image')], async (req, res) => {
     try {
         const { title, category } = req.body;
         console.log(`POST /api/wallpapers - Title: ${title}, Category: ${category}`);
@@ -128,8 +129,8 @@ router.post('/', upload.single('image'), async (req, res) => {
 
 // @route   DELETE api/wallpapers/:id
 // @desc    Delete a wallpaper
-// @access  Public (Should be private in production)
-router.delete('/:id', async (req, res) => {
+// @access  Private
+router.delete('/:id', auth, async (req, res) => {
     try {
         const id = req.params.id;
 
