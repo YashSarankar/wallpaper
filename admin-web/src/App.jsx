@@ -16,7 +16,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Smart URL management
 const getBaseUrl = () => {
-    let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    let url = import.meta.env.VITE_API_URL;
     return url.endsWith('/wallpapers') ? url.replace('/wallpapers', '') : url;
 };
 
