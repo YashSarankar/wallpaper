@@ -282,7 +282,11 @@ class WallpaperCard extends ConsumerWidget {
                 tag: wallpaper.id,
                 child: AspectRatio(
                   aspectRatio: 0.7,
-                  child: UniversalImage(path: wallpaper.url, fit: BoxFit.cover),
+                  child: UniversalImage(
+                    path: wallpaper.midUrl ?? wallpaper.url,
+                    thumbnailUrl: wallpaper.lowUrl,
+                    fit: BoxFit.cover,
+                  ),
                 ),
               ),
               Positioned(

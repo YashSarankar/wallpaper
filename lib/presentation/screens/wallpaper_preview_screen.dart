@@ -310,6 +310,7 @@ class _WallpaperPreviewScreenState
                 tag: widget.wallpaper.id,
                 child: UniversalImage(
                   path: _highResUrl,
+                  thumbnailUrl: widget.wallpaper.lowUrl,
                   fit: BoxFit.cover,
                   placeholder: const Center(
                     child: CircularProgressIndicator(color: Colors.white),

@@ -8,31 +8,66 @@ class WallpaperModel extends Equatable {
   @HiveField(1)
   final String type; // 'static' or 'animated'
   @HiveField(2)
-  final String url;
+  final String url; // Treats as 'original'
   @HiveField(3)
   final String category;
+  @HiveField(4)
+  final String? midUrl;
+  @HiveField(5)
+  final String? lowUrl;
 
   const WallpaperModel({
     required this.id,
     required this.type,
     required this.url,
     required this.category,
+    this.midUrl,
+    this.lowUrl,
   });
 
   factory WallpaperModel.fromJson(
     Map<String, dynamic> json,
     String categoryName,
   ) {
+    // Backend returns imageUrl: { original, mid, low }
+    // Legacy might be just 'url'
+    String original = '';
+    String? mid;
+    String? low;
+
+    if (json['imageUrl'] != null && json['imageUrl'] is Map) {
+      original = json['imageUrl']['original'] ?? '';
+      mid = json['imageUrl']['mid'];
+      low = json['imageUrl']['low'];
+    } else {
+      original = json['url'] ?? '';
+    }
+
+    // Fallback for ID if mongodb _id is present but id is not
+    String id =
+        json['id'] ??
+        json['_id'] ??
+        DateTime.now().millisecondsSinceEpoch.toString();
+
     return WallpaperModel(
-      id: json['id'] as String,
-      type: json['type'] as String,
-      url: json['url'] as String,
-      category: categoryName,
+      id: id,
+      type: json['type'] ?? 'static',
+      url: original,
+      category: json['category'] ?? categoryName, // Backend provides category
+      midUrl: mid,
+      lowUrl: low,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {'id': id, 'type': type, 'url': url, 'category': category};
+    return {
+      'id': id,
+      'type': type,
+      'url': url,
+      'category': category,
+      'midUrl': midUrl,
+      'lowUrl': lowUrl,
+    };
   }
 
   WallpaperModel copyWith({
@@ -40,17 +75,21 @@ class WallpaperModel extends Equatable {
     String? type,
     String? url,
     String? category,
+    String? midUrl,
+    String? lowUrl,
   }) {
     return WallpaperModel(
       id: id ?? this.id,
       type: type ?? this.type,
       url: url ?? this.url,
       category: category ?? this.category,
+      midUrl: midUrl ?? this.midUrl,
+      lowUrl: lowUrl ?? this.lowUrl,
     );
   }
 
   @override
-  List<Object?> get props => [id, type, url, category];
+  List<Object?> get props => [id, type, url, category, midUrl, lowUrl];
 }
 
 class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
@@ -68,13 +107,15 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       type: fields[1] as String,
       url: fields[2] as String,
       category: fields[3] as String,
+      midUrl: fields[4] as String?,
+      lowUrl: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, WallpaperModel obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -82,7 +123,11 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       ..writeByte(2)
       ..write(obj.url)
       ..writeByte(3)
-      ..write(obj.category);
+      ..write(obj.category)
+      ..writeByte(4)
+      ..write(obj.midUrl)
+      ..writeByte(5)
+      ..write(obj.lowUrl);
   }
 
   @override

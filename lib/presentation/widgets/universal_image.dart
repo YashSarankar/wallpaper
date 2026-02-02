@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 class UniversalImage extends StatelessWidget {
   final String path;
+  final String? thumbnailUrl;
   final BoxFit fit;
   final Widget? placeholder;
   final Widget? errorWidget;
@@ -10,6 +11,7 @@ class UniversalImage extends StatelessWidget {
   const UniversalImage({
     super.key,
     required this.path,
+    this.thumbnailUrl,
     this.fit = BoxFit.cover,
     this.placeholder,
     this.errorWidget,
@@ -24,7 +26,14 @@ class UniversalImage extends StatelessWidget {
         fadeInDuration: const Duration(milliseconds: 500),
         fadeOutDuration: const Duration(milliseconds: 300),
         placeholder: (context, url) =>
-            placeholder ?? _buildShimmerPlaceholder(),
+            placeholder ??
+            (thumbnailUrl != null
+                ? CachedNetworkImage(
+                    imageUrl: thumbnailUrl!,
+                    fit: fit,
+                    placeholder: (context, url) => _buildShimmerPlaceholder(),
+                  )
+                : _buildShimmerPlaceholder()),
         errorWidget: (context, url, error) =>
             errorWidget ?? _buildErrorPlaceholder(),
       );

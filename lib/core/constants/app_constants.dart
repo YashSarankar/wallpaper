@@ -15,5 +15,5 @@ class AppConstants {
 
   // Remote Config (Example URL, replace with actual)
   static const String remoteWallpaperJsonUrl =
-      'https://raw.githubusercontent.com/username/repo/main/wallpapers.json';
+      'http://192.168.29.105:5000/api/wallpapers';
 }
