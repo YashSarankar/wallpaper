@@ -112,6 +112,18 @@ const Dashboard = () => {
         setTimeout(() => setMessage(null), 3000);
     };
 
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this wallpaper?')) return;
+
+        try {
+            await axios.delete(`${API_BASE_URL}/${id}`);
+            setMessage({ type: 'success', text: 'Wallpaper deleted' });
+            fetchWallpapers();
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Delete failed' });
+        }
+    };
+
     return (
         <div className="min-h-screen p-4 md:p-8 max-w-[1400px] mx-auto">
             {/* Header */}
@@ -254,8 +266,11 @@ const Dashboard = () => {
                                         </div>
                                         {/* Actions on hover */}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                            {/* Delete button can be added here */}
-                                            <button className="bg-red-500/20 p-3 rounded-full hover:bg-red-500/80 transition-all text-red-100">
+                                            {/* Delete button */}
+                                            <button
+                                                onClick={() => handleDelete(wp._id)}
+                                                className="bg-red-500/20 p-3 rounded-full hover:bg-red-500/80 transition-all text-red-100"
+                                            >
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>

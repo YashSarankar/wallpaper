@@ -76,4 +76,31 @@ router.post('/', upload.single('image'), async (req, res) => {
     }
 });
 
+// @route   DELETE api/wallpapers/:id
+// @desc    Delete a wallpaper
+// @access  Public (Should be private in production)
+router.delete('/:id', async (req, res) => {
+    try {
+        const wallpaper = await Wallpaper.findById(req.params.id);
+
+        if (!wallpaper) {
+            return res.status(404).json({ msg: 'Wallpaper not found' });
+        }
+
+        // Optional: Delete files from GCS as well
+        // We'll skip complex GCS deletion for now to ensure DB cleanup works first,
+        // but the DB entry will be gone from the app instantly.
+
+        await wallpaper.deleteOne();
+
+        res.json({ msg: 'Wallpaper removed' });
+    } catch (err) {
+        console.error(err.message);
+        if (err.kind === 'ObjectId') {
+            return res.status(404).json({ msg: 'Wallpaper not found' });
+        }
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;
