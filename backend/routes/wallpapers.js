@@ -17,11 +17,20 @@ const upload = multer({
 // @desc    Get all files directly from GCS bucket
 router.get('/storage-sync', async (req, res) => {
     try {
-        console.log(`Syncing from bucket: ${bucket.name}`);
-        const [files] = await bucket.getFiles({ prefix: 'wallpapers/' });
+        console.log(`Manual Sync requested for bucket: ${bucket ? bucket.name : 'NULL'}`);
+        if (!bucket) {
+            return res.status(500).json({ error: 'GCS Bucket not initialized' });
+        }
 
-        // Filter for files in 'original' folder to avoid duplicates
+        const [files] = await bucket.getFiles();
+        console.log(`Total files found in bucket: ${files.length}`);
+
+        // Let's log the first 5 file names to see the structure
+        files.slice(0, 5).forEach(f => console.log(` - File: ${f.name}`));
+
+        // Filter for files in 'original' folder 
         const originalFiles = files.filter(f => f.name.includes('/original/') && !f.name.endsWith('/'));
+        console.log(`Filtered 'original' files: ${originalFiles.length}`);
 
         const wallpapersFromGCS = originalFiles.map(file => {
             const fileName = file.name.split('/').pop();
@@ -40,8 +49,12 @@ router.get('/storage-sync', async (req, res) => {
 
         res.json(wallpapersFromGCS);
     } catch (err) {
-        console.error('Sync Error:', err);
-        res.status(500).json({ error: err.message });
+        console.error('CRITICAL SYNC ERROR:', err);
+        res.status(500).json({
+            msg: 'GCS Sync failed',
+            error: err.message,
+            bucket: bucket ? bucket.name : 'NULL'
+        });
     }
 });
 

@@ -4,17 +4,30 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 // Instantiate a storage client
 const storageOptions = {};
+console.log('Initializing GCS Storage...');
+
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-    // For production (Render/Heroku), we can pass the JSON string directly
-    storageOptions.credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+    try {
+        console.log('Using GOOGLE_APPLICATION_CREDENTIALS_JSON from env...');
+        storageOptions.credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON);
+        console.log(`GCS Credentials parsed. Project ID: ${storageOptions.credentials.project_id}`);
+    } catch (err) {
+        console.error('FAILED to parse GOOGLE_APPLICATION_CREDENTIALS_JSON:', err.message);
+    }
 } else {
-    // For local development
+    console.log('Using local keyFilename for GCS...');
     storageOptions.keyFilename = process.env.GOOGLE_APPLICATION_CREDENTIALS;
 }
 
 const storage = new Storage(storageOptions);
 
 const bucketName = process.env.GCS_BUCKET_NAME;
+console.log(`Targeting GCS Bucket: ${bucketName}`);
+
+if (!bucketName) {
+    console.error('CRITICAL: GCS_BUCKET_NAME is not defined!');
+}
+
 const bucket = storage.bucket(bucketName);
 
 module.exports = { storage, bucket };
