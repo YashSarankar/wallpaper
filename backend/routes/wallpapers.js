@@ -3,6 +3,7 @@ const router = express.Router();
 const Wallpaper = require('../models/Wallpaper');
 const multer = require('multer');
 const { processAndUploadImage } = require('../services/imageService');
+const { bucket } = require('../config/gcs');
 
 // Multer config for memory storage
 const upload = multer({
@@ -10,6 +11,35 @@ const upload = multer({
     limits: {
         fileSize: 10 * 1024 * 1024, // 10MB limit
     },
+});
+
+// @route   GET /api/wallpapers/storage-sync
+// @desc    Get all files directly from GCS bucket
+router.get('/storage-sync', async (req, res) => {
+    try {
+        console.log('Syncing starting from GCS...');
+        const [files] = await bucket.getFiles({ prefix: 'wallpapers/low/' });
+
+        const wallpapersFromGCS = files.map(file => {
+            const nameOnly = file.name.split('/').pop().replace('.jpg', '');
+            return {
+                _id: file.name, // Use the path as ID for GCS-only files
+                title: nameOnly,
+                category: 'GCS Storage',
+                imageUrl: {
+                    low: `https://storage.googleapis.com/${bucket.name}/${file.name}`,
+                    mid: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/low/', '/mid/')}`,
+                    original: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/low/', '/original/')}`
+                },
+                isStorageOnly: true
+            };
+        });
+
+        res.json(wallpapersFromGCS);
+    } catch (err) {
+        console.error('Sync Error:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // @route   GET /api/wallpapers
@@ -85,24 +115,41 @@ router.post('/', upload.single('image'), async (req, res) => {
 // @access  Public (Should be private in production)
 router.delete('/:id', async (req, res) => {
     try {
-        const wallpaper = await Wallpaper.findById(req.params.id);
+        const id = req.params.id;
+
+        // If the ID looks like a GCS path (contains 'wallpapers/')
+        if (id.includes('wallpapers/')) {
+            console.log(`Deleting file directly from GCS: ${id}`);
+            const file = bucket.file(id);
+            const [exists] = await file.exists();
+            if (exists) {
+                await file.delete();
+                // Also try to delete mid and original versions
+                try {
+                    await bucket.file(id.replace('/low/', '/mid/')).delete();
+                    await bucket.file(id.replace('/low/', '/original/')).delete();
+                } catch (e) { /* ignore if mid/original don't exist */ }
+            }
+            return res.json({ msg: 'GCS File removed' });
+        }
+
+        const wallpaper = await Wallpaper.findById(id);
 
         if (!wallpaper) {
             return res.status(404).json({ msg: 'Wallpaper not found' });
         }
 
-        // Optional: Delete files from GCS as well
-        // We'll skip complex GCS deletion for now to ensure DB cleanup works first,
-        // but the DB entry will be gone from the app instantly.
+        // Try to delete GCS files if they exist in the wallpaper object
+        if (wallpaper.imageUrl && wallpaper.imageUrl.low) {
+            const lowPath = wallpaper.imageUrl.low.split('.com/')[1].split('/').slice(1).join('/');
+            // ... complex path logic can be added, but DB delete is primary
+        }
 
         await wallpaper.deleteOne();
 
         res.json({ msg: 'Wallpaper removed' });
     } catch (err) {
         console.error(err.message);
-        if (err.kind === 'ObjectId') {
-            return res.status(404).json({ msg: 'Wallpaper not found' });
-        }
         res.status(500).send('Server Error');
     }
 });

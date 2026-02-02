@@ -20,6 +20,7 @@ const Dashboard = () => {
     const [wallpapers, setWallpapers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
+    const [viewMode, setViewMode] = useState('database'); // 'database' or 'storage'
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
 
@@ -31,10 +32,13 @@ const Dashboard = () => {
     const [message, setMessage] = useState(null);
 
     const categories = ['Nature', 'Space', 'Game', 'Anime', 'Animal', 'Abstract'];
-
     useEffect(() => {
-        fetchWallpapers();
-    }, []);
+        if (viewMode === 'database') {
+            fetchWallpapers();
+        } else {
+            fetchStorageFiles();
+        }
+    }, [viewMode]);
 
     const fetchWallpapers = async () => {
         try {
@@ -43,6 +47,18 @@ const Dashboard = () => {
             setWallpapers(res.data);
         } catch (err) {
             console.error('Failed to fetch:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchStorageFiles = async () => {
+        try {
+            setLoading(true);
+            const res = await axios.get(`${API_BASE_URL}/storage-sync`);
+            setWallpapers(res.data);
+        } catch (err) {
+            console.error('Failed to sync storage:', err);
         } finally {
             setLoading(false);
         }
@@ -231,9 +247,27 @@ const Dashboard = () => {
                 <div className="lg:col-span-8 space-y-6">
                     <div className="glass p-6 rounded-3xl min-h-[600px]">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                            <h2 className="text-xl font-bold flex items-center gap-2">
-                                <ImageIcon size={20} className="text-purple-400" /> Existing Gallery
-                            </h2>
+                            <div className="flex items-center gap-4">
+                                <h2 className="text-xl font-bold flex items-center gap-2">
+                                    <ImageIcon size={20} className={viewMode === 'database' ? 'text-purple-400' : 'text-orange-400'} />
+                                    {viewMode === 'database' ? 'Live Gallery' : 'GCS Storage'}
+                                </h2>
+
+                                <div className="flex bg-white/5 p-1 rounded-xl glass">
+                                    <button
+                                        onClick={() => setViewMode('database')}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'database' ? 'bg-indigo-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    >
+                                        Database
+                                    </button>
+                                    <button
+                                        onClick={() => setViewMode('storage')}
+                                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'storage' ? 'bg-orange-500 text-white shadow-lg' : 'text-white/40 hover:text-white'}`}
+                                    >
+                                        Storage
+                                    </button>
+                                </div>
+                            </div>
                             <div className="relative w-full sm:w-64">
                                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
                                 <input type="text" placeholder="Search title..." className="pl-10 text-sm py-2" />
