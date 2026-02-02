@@ -20,6 +20,7 @@ const getBaseUrl = () => {
     return url.endsWith('/wallpapers') ? url.replace('/wallpapers', '') : url;
 };
 
+//test
 const BASE_API = getBaseUrl();
 const API_BASE_URL = `${BASE_API}/wallpapers`;
 const AUTH_URL = `${BASE_API}/auth/login`;
