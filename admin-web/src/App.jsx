@@ -15,12 +15,19 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 // Smart URL management
+// Robust URL management
 const getBaseUrl = () => {
-    let url = import.meta.env.VITE_API_URL;
-    return url.endsWith('/wallpapers') ? url.replace('/wallpapers', '') : url;
+    // Falls back to local if VITE_API_URL is missing
+    let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+    // Remove trailing slashes and the '/wallpapers' suffix if present
+    url = url.replace(/\/$/, '');
+    if (url.endsWith('/wallpapers')) {
+        url = url.replace('/wallpapers', '');
+    }
+    return url;
 };
 
-//test
 const BASE_API = getBaseUrl();
 const API_BASE_URL = `${BASE_API}/wallpapers`;
 const AUTH_URL = `${BASE_API}/auth/login`;
