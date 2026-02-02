@@ -25,8 +25,17 @@ app.use('/api/wallpapers', require('./routes/wallpapers'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-    console.error('Global Error Handler:', err);
-    res.status(500).json({ error: err.message || 'Something went wrong on the server' });
+    console.error('SERVER CRASH:', {
+        message: err.message,
+        stack: err.stack,
+        path: req.path,
+        method: req.method
+    });
+    res.status(500).json({
+        msg: 'The server encountered an error processing your request',
+        error: err.message,
+        path: req.path
+    });
 });
 
 const PORT = process.env.PORT || 5000;
