@@ -17,19 +17,22 @@ const upload = multer({
 // @desc    Get all files directly from GCS bucket
 router.get('/storage-sync', async (req, res) => {
     try {
-        console.log('Syncing starting from GCS...');
-        const [files] = await bucket.getFiles({ prefix: 'wallpapers/low/' });
+        console.log(`Syncing from bucket: ${bucket.name}`);
+        const [files] = await bucket.getFiles({ prefix: 'wallpapers/' });
 
-        const wallpapersFromGCS = files.map(file => {
-            const nameOnly = file.name.split('/').pop().replace('.jpg', '');
+        // Filter for files in 'original' folder to avoid duplicates
+        const originalFiles = files.filter(f => f.name.includes('/original/') && !f.name.endsWith('/'));
+
+        const wallpapersFromGCS = originalFiles.map(file => {
+            const fileName = file.name.split('/').pop();
             return {
-                _id: file.name, // Use the path as ID for GCS-only files
-                title: nameOnly,
+                _id: file.name,
+                title: fileName.replace('.jpg', '').replace('.jpeg', ''),
                 category: 'GCS Storage',
                 imageUrl: {
-                    low: `https://storage.googleapis.com/${bucket.name}/${file.name}`,
-                    mid: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/low/', '/mid/')}`,
-                    original: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/low/', '/original/')}`
+                    original: `https://storage.googleapis.com/${bucket.name}/${file.name}`,
+                    mid: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/original/', '/mid/')}`,
+                    low: `https://storage.googleapis.com/${bucket.name}/${file.name.replace('/original/', '/low/')}`
                 },
                 isStorageOnly: true
             };

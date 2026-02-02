@@ -290,7 +290,7 @@ const Dashboard = () => {
                                         className="group glass rounded-2xl overflow-hidden aspect-[3/4] relative"
                                     >
                                         <img
-                                            src={wp.imageUrl.low}
+                                            src={wp.imageUrl.low || wp.imageUrl.original}
                                             alt=""
                                             className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500"
                                         />
