@@ -61,7 +61,9 @@ const Login = ({ onLogin }) => {
             const res = await axios.post(AUTH_URL, { username, password });
             onLogin(res.data.token);
         } catch (err) {
-            setError(err.response?.data?.msg || 'Authentication failed');
+            console.error('Login Error:', err);
+            const serverMessage = err.response?.data?.msg || err.response?.data?.error;
+            setError(serverMessage || `Connection Error: ${err.message}`);
         } finally {
             setIsLoading(false);
         }
