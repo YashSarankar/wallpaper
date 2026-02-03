@@ -143,15 +143,26 @@ const Dashboard = ({ onLogout }) => {
     const [message, setMessage] = useState(null);
 
     const categories = [
+        'Amoled',
         'Nature',
-        'Space',
-        'Game',
-        'Anime',
-        'Minimal',
-        'AMOLED',
-        'Architecture',
+        'Stock',
+        'Black',
+        'Cars & Bike',
+        'Model',
+        'Fitness',
+        'God',
+        'Festival',
         'Abstract',
-        'Trending'
+        'Anime',
+        'Romantic Vibe',
+        'Fantasy',
+        'Top Wallpaper',
+        'Superhero',
+        'Travel',
+        'Movies',
+        'Food',
+        'Text',
+        'Game'
     ];
 
     useEffect(() => {
