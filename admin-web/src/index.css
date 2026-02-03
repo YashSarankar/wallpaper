@@ -98,6 +98,12 @@ select {
   transition: all 0.2s;
 }
 
+/* Fix for invisible options in some browsers */
+option {
+  background-color: #1a1a1c;
+  color: white;
+}
+
 input:focus,
 select:focus {
   border-color: #6366f1;
