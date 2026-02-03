@@ -1,13 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Keep this one for SliverMasonryGrid.count
 
 import '../providers/wallpaper_provider.dart';
-import '../../data/models/wallpaper_model.dart';
-import 'wallpaper_preview_screen.dart';
 import 'settings_screen.dart';
-import '../widgets/universal_image.dart';
+import 'favorites_screen.dart';
+import '../widgets/wallpaper_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -42,21 +41,13 @@ class _HomeContentState extends ConsumerState<HomeContent> {
           }
 
           final allWallpapers = categories.expand((c) => c.wallpapers).toList();
-          final favoriteWallpapers = ref.watch(favoritesProvider);
-
           final displayedWallpapers = _selectedCategory == 'All'
               ? allWallpapers
-              : _selectedCategory == 'Favorites'
-              ? favoriteWallpapers
               : allWallpapers
                     .where((w) => w.category == _selectedCategory)
                     .toList();
 
-          final allCategories = [
-            'All',
-            'Favorites',
-            ...categories.map((c) => c.name),
-          ];
+          final allCategories = ['All', ...categories.map((c) => c.name)];
 
           return CustomScrollView(
             physics: const BouncingScrollPhysics(),
@@ -82,22 +73,44 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                         letterSpacing: -0.5,
                       ),
                     ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      icon: Icon(
-                        Icons.settings_outlined,
-                        color: isDarkMode ? Colors.white : Colors.black,
-                        size: 22,
-                      ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.favorite_outline_rounded,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            size: 24,
                           ),
-                        );
-                      },
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const FavoritesScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.settings_outlined,
+                            color: isDarkMode ? Colors.white : Colors.black,
+                            size: 22,
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const SettingsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -167,9 +180,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _selectedCategory == 'Favorites'
-                                  ? Icons.favorite_border_rounded
-                                  : Icons.image_not_supported_outlined,
+                              Icons.image_not_supported_outlined,
                               size: 64,
                               color: isDarkMode
                                   ? Colors.white24
@@ -177,9 +188,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              _selectedCategory == 'Favorites'
-                                  ? 'No favorites yet'
-                                  : 'No wallpapers in this category',
+                              'No wallpapers in this category',
                               style: TextStyle(
                                 color: isDarkMode
                                     ? Colors.white60
@@ -228,94 +237,6 @@ class _HomeContentState extends ConsumerState<HomeContent> {
               TextButton(
                 onPressed: () => ref.refresh(wallpapersProvider),
                 child: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class WallpaperCard extends ConsumerWidget {
-  final WallpaperModel wallpaper;
-
-  const WallpaperCard({super.key, required this.wallpaper});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isFav = ref
-        .watch(favoritesProvider.notifier)
-        .isFavorite(wallpaper.id);
-
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 500),
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                WallpaperPreviewScreen(wallpaper: wallpaper),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: Stack(
-            children: [
-              Hero(
-                tag: wallpaper.id,
-                child: AspectRatio(
-                  aspectRatio: 0.7,
-                  child: UniversalImage(
-                    path: wallpaper.midUrl ?? wallpaper.url,
-                    thumbnailUrl: wallpaper.lowUrl,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: GestureDetector(
-                  onTap: () => ref
-                      .read(favoritesProvider.notifier)
-                      .toggleFavorite(wallpaper),
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isFav
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_outline_rounded,
-                          color: isFav ? Colors.redAccent : Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ),
             ],
           ),
