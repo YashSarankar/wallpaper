@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -40,6 +41,14 @@ class UniversalImage extends StatelessWidget {
                 : _buildShimmerPlaceholder()),
         errorWidget: (context, url, error) =>
             errorWidget ?? _buildErrorPlaceholder(),
+      );
+    } else if (File(path).existsSync()) {
+      imageWidget = Image.file(
+        File(path),
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          return errorWidget ?? _buildErrorPlaceholder();
+        },
       );
     } else {
       imageWidget = Image.asset(

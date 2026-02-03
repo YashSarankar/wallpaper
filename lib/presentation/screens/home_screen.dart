@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/wallpaper_provider.dart';
@@ -11,6 +13,7 @@ import '../../core/constants/app_constants.dart';
 import 'home_tab.dart';
 import 'trending_tab.dart';
 import 'category_tab.dart';
+import 'wallpaper_preview_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -30,9 +33,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   final List<String> _titles = ['Amozea', 'Trending', 'Categories'];
 
+  Future<void> _pickImageFromGallery() async {
+    final picker = ImagePicker();
+    try {
+      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+      if (image != null && mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                WallpaperPreviewScreen(localFile: File(image.path)),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ref.watch(themeProvider);
+    final favorites = ref.watch(favoritesProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -87,15 +109,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         ),
                         Row(
                           children: [
-                            _buildHeaderIcon(AppConstants.heartIcon, () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const FavoritesScreen(),
-                                ),
-                              );
-                            }, isDarkMode),
-                            const SizedBox(width: 8), // Reduced from 16
+                            _buildHeaderIcon(
+                              AppConstants.heartIcon,
+                              () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const FavoritesScreen(),
+                                  ),
+                                );
+                              },
+                              isDarkMode,
+                              count: favorites.length,
+                            ),
+                            const SizedBox(width: 8),
+                            // Gallery Icon
+                            _buildHeaderIconButton(
+                              CupertinoIcons.photo_on_rectangle,
+                              _pickImageFromGallery,
+                              isDarkMode,
+                            ),
+                            const SizedBox(width: 8),
                             _buildHeaderIcon(AppConstants.settingsIcon, () {
                               Navigator.push(
                                 context,
@@ -169,22 +204,76 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeaderIcon(String asset, VoidCallback onTap, bool isDarkMode) {
+  Widget _buildHeaderIcon(
+    String asset,
+    VoidCallback onTap,
+    bool isDarkMode, {
+    int? count,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: (isDarkMode ? Colors.white : Colors.black).withOpacity(
+                0.05,
+              ),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Image.asset(
+              asset,
+              color: isDarkMode ? Colors.white : Colors.black,
+              width: 20,
+              height: 20,
+            ),
+          ),
+          if (count != null && count > 0)
+            Positioned(
+              top: -5,
+              right: -5,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.redAccent,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                child: Text(
+                  count > 99 ? '99+' : count.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeaderIconButton(
+    IconData icon,
+    VoidCallback onTap,
+    bool isDarkMode,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(
-          10,
-        ), // Increased slightly for better tap area while compact
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.05),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Image.asset(
-          asset,
+        child: Icon(
+          icon,
           color: isDarkMode ? Colors.white : Colors.black,
-          width: 20, // Slightly smaller icons
-          height: 20,
+          size: 20,
         ),
       ),
     );

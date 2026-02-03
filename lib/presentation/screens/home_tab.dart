@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/wallpaper_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/wallpaper_card.dart';
 
 final homeSubTabProvider = StateProvider<int>((ref) => 0);
@@ -17,6 +18,7 @@ class HomeTab extends ConsumerWidget {
     final randomWallpapers = ref.watch(randomWallpapersProvider);
     final latestWallpapers = ref.watch(latestWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
+    final settings = ref.watch(settingsProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
     final wallpapersAsync = ref.watch(wallpapersProvider);
 
@@ -98,9 +100,9 @@ class HomeTab extends ConsumerWidget {
             return SliverPadding(
               padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
               sliver: SliverMasonryGrid.count(
-                crossAxisCount: 2,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
+                crossAxisCount: settings.gridColumns,
+                mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+                crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
                 itemBuilder: (context, index) {
                   return WallpaperCard(wallpaper: displayedWallpapers[index]);
                 },

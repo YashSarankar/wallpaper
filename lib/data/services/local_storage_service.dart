@@ -5,38 +5,42 @@ import '../models/wallpaper_model.dart';
 class LocalStorageService {
   static Future<void> init() async {
     await Hive.initFlutter();
-    Hive.registerAdapter(WallpaperModelAdapter());
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(WallpaperModelAdapter());
+    }
     await Hive.openBox(AppConstants.themeBox);
     await Hive.openBox<WallpaperModel>(AppConstants.favoritesBox);
   }
 
   // Theme
-  Box get _themeBox => Hive.box(AppConstants.themeBox);
+  static bool get isDarkMode {
+    final box = Hive.box(AppConstants.themeBox);
+    return box.get(AppConstants.themeKey, defaultValue: false);
+  }
 
-  bool get isDarkMode =>
-      _themeBox.get(AppConstants.themeKey, defaultValue: false);
-
-  Future<void> setDarkMode(bool isDark) async {
-    await _themeBox.put(AppConstants.themeKey, isDark);
+  static Future<void> setDarkMode(bool isDark) async {
+    final box = Hive.box(AppConstants.themeBox);
+    await box.put(AppConstants.themeKey, isDark);
   }
 
   // Favorites
-  Box<WallpaperModel> get _favoritesBox =>
-      Hive.box<WallpaperModel>(AppConstants.favoritesBox);
-
-  List<WallpaperModel> getFavorites() {
-    return _favoritesBox.values.toList();
+  static List<WallpaperModel> getFavorites() {
+    final box = Hive.box<WallpaperModel>(AppConstants.favoritesBox);
+    return box.values.toList();
   }
 
-  Future<void> addToFavorites(WallpaperModel wallpaper) async {
-    await _favoritesBox.put(wallpaper.id, wallpaper);
+  static Future<void> addToFavorites(WallpaperModel wallpaper) async {
+    final box = Hive.box<WallpaperModel>(AppConstants.favoritesBox);
+    await box.put(wallpaper.id, wallpaper);
   }
 
-  Future<void> removeFromFavorites(String id) async {
-    await _favoritesBox.delete(id);
+  static Future<void> removeFromFavorites(String id) async {
+    final box = Hive.box<WallpaperModel>(AppConstants.favoritesBox);
+    await box.delete(id);
   }
 
-  bool isFavorite(String id) {
-    return _favoritesBox.containsKey(id);
+  static bool isFavorite(String id) {
+    final box = Hive.box<WallpaperModel>(AppConstants.favoritesBox);
+    return box.containsKey(id);
   }
 }

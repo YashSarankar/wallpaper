@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/wallpaper_model.dart';
 import '../providers/wallpaper_provider.dart';
+import '../providers/settings_provider.dart';
 import '../screens/wallpaper_preview_screen.dart';
 import 'universal_image.dart';
 
@@ -16,6 +17,7 @@ class WallpaperCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favorites = ref.watch(favoritesProvider);
     final isFav = favorites.any((w) => w.id == wallpaper.id);
+    final settings = ref.watch(settingsProvider);
 
     return GestureDetector(
       onTap: () {
@@ -53,7 +55,9 @@ class WallpaperCard extends ConsumerWidget {
                 child: AspectRatio(
                   aspectRatio: 0.7,
                   child: UniversalImage(
-                    path: wallpaper.midUrl ?? wallpaper.url,
+                    path: settings.dataSaver
+                        ? (wallpaper.lowUrl ?? wallpaper.url)
+                        : (wallpaper.midUrl ?? wallpaper.url),
                     thumbnailUrl: wallpaper.lowUrl,
                     fit: BoxFit.cover,
                     borderRadius: 28,

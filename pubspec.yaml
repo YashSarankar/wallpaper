@@ -59,6 +59,8 @@ dependencies:
 
   # Icons
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.4
+  workmanager: ^0.9.0+3
 
 dev_dependencies:
   flutter_test:

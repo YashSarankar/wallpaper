@@ -14,14 +14,16 @@ import '../widgets/universal_image.dart';
 import '../providers/wallpaper_provider.dart';
 
 class WallpaperPreviewScreen extends ConsumerStatefulWidget {
-  final WallpaperModel wallpaper;
+  final WallpaperModel? wallpaper;
+  final File? localFile;
   final String? heroTag;
 
   const WallpaperPreviewScreen({
     super.key,
-    required this.wallpaper,
+    this.wallpaper,
+    this.localFile,
     this.heroTag,
-  });
+  }) : assert(wallpaper != null || localFile != null);
 
   @override
   ConsumerState<WallpaperPreviewScreen> createState() =>
@@ -36,7 +38,8 @@ class _WallpaperPreviewScreenState
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 
   String get _highResUrl {
-    String url = widget.wallpaper.url;
+    if (widget.localFile != null) return widget.localFile!.path;
+    String url = widget.wallpaper!.url;
     if (url.contains('unsplash.com')) {
       // Remove restricted width/quality and boost it for preview
       url = url.replaceAll(RegExp(r'&w=\d+'), '&w=2400');
@@ -103,7 +106,13 @@ class _WallpaperPreviewScreenState
   Future<void> _setWallpaper(int location) async {
     setState(() => _isSetting = true);
     try {
-      final file = await _downloadFile(widget.wallpaper.url);
+      File? file;
+      if (widget.localFile != null) {
+        file = widget.localFile;
+      } else {
+        file = await _downloadFile(widget.wallpaper!.url);
+      }
+
       if (file != null) {
         try {
           final result = await platform.invokeMethod('setWallpaper', {
@@ -136,7 +145,9 @@ class _WallpaperPreviewScreenState
   }
 
   Future<void> _downloadWallpaper() async {
-    debugPrint('Starting download process for: ${widget.wallpaper.url}');
+    if (widget.localFile != null) return;
+
+    debugPrint('Starting download process for: ${widget.wallpaper!.url}');
     if (Platform.isAndroid) {
       final status = await [Permission.storage, Permission.photos].request();
       debugPrint('Permission status: $status');
@@ -159,7 +170,7 @@ class _WallpaperPreviewScreenState
           }
           final extension = url.split('.').last.split('?').first;
           final fileName =
-              'Wallpaper_${widget.wallpaper.id}_${DateTime.now().millisecondsSinceEpoch}.$extension';
+              'Wallpaper_${widget.wallpaper!.id}_${DateTime.now().millisecondsSinceEpoch}.$extension';
           savePath = '${directory.path}/$fileName';
         } else {
           final appDir = await getApplicationDocumentsDirectory();
@@ -210,7 +221,8 @@ class _WallpaperPreviewScreenState
   }
 
   Future<void> _shareWallpaper() async {
-    final file = await _downloadFile(widget.wallpaper.url);
+    if (widget.localFile != null) return; // Already on device
+    final file = await _downloadFile(widget.wallpaper!.url);
     if (file != null) {
       final newPath =
           '${file.parent.path}/${file.uri.pathSegments.last.replaceAll(RegExp(r'\.[^.]+$'), '')}.png';
@@ -302,8 +314,13 @@ class _WallpaperPreviewScreenState
 
   @override
   Widget build(BuildContext context) {
+    final isLocal = widget.localFile != null;
     final favorites = ref.watch(favoritesProvider);
-    final isFav = favorites.any((w) => w.id == widget.wallpaper.id);
+    final isFav = isLocal
+        ? favorites.any(
+            (w) => w.id == 'local_${widget.localFile!.path.hashCode}',
+          )
+        : favorites.any((w) => w.id == widget.wallpaper!.id);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -316,10 +333,12 @@ class _WallpaperPreviewScreenState
               maxScale: 3.0,
               boundaryMargin: EdgeInsets.zero,
               child: Hero(
-                tag: widget.heroTag ?? widget.wallpaper.id,
+                tag:
+                    widget.heroTag ??
+                    (isLocal ? 'local' : widget.wallpaper!.id),
                 child: UniversalImage(
                   path: _highResUrl,
-                  thumbnailUrl: widget.wallpaper.lowUrl,
+                  thumbnailUrl: isLocal ? null : widget.wallpaper!.lowUrl,
                   fit: BoxFit.cover,
                   placeholder: const Center(
                     child: CircularProgressIndicator(
@@ -451,14 +470,17 @@ class _WallpaperPreviewScreenState
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildActionIcon(
-                          icon: CupertinoIcons.cloud_download,
-                          onTap: _progress != null ? null : _downloadWallpaper,
-                          isLoading: _progress != null,
-                        ),
-                        const SizedBox(width: 4),
+                        if (!isLocal)
+                          _buildActionIcon(
+                            icon: CupertinoIcons.cloud_download,
+                            onTap: _progress != null
+                                ? null
+                                : _downloadWallpaper,
+                            isLoading: _progress != null,
+                          ),
+                        if (!isLocal) const SizedBox(width: 4),
                         _buildSetAction(),
-                        const SizedBox(width: 4),
+                        if (!isLocal) const SizedBox(width: 4),
                         _buildActionIcon(
                           icon: isFav
                               ? CupertinoIcons.heart_fill
@@ -466,9 +488,15 @@ class _WallpaperPreviewScreenState
                           activeColor: Colors.redAccent,
                           isActive: isFav,
                           onTap: () {
-                            ref
-                                .read(favoritesProvider.notifier)
-                                .toggleFavorite(widget.wallpaper);
+                            if (isLocal) {
+                              ref
+                                  .read(favoritesProvider.notifier)
+                                  .toggleLocalFavorite(widget.localFile!);
+                            } else {
+                              ref
+                                  .read(favoritesProvider.notifier)
+                                  .toggleFavorite(widget.wallpaper!);
+                            }
                             HapticFeedback.mediumImpact();
                           },
                         ),

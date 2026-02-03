@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/repositories/wallpaper_repository_impl.dart';
@@ -47,42 +49,70 @@ final trendingWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
 });
 
 class ThemeNotifier extends StateNotifier<bool> {
-  final LocalStorageService _storage;
-
-  ThemeNotifier(this._storage) : super(_storage.isDarkMode);
+  ThemeNotifier() : super(LocalStorageService.isDarkMode);
 
   Future<void> toggleTheme() async {
     final newMode = !state;
-    await _storage.setDarkMode(newMode);
+    await LocalStorageService.setDarkMode(newMode);
     state = newMode;
   }
 }
 
 final themeProvider = StateNotifierProvider<ThemeNotifier, bool>((ref) {
-  return ThemeNotifier(ref.watch(localStorageServiceProvider));
+  return ThemeNotifier();
 });
 
 // Favorites Logic
 class FavoritesNotifier extends StateNotifier<List<WallpaperModel>> {
-  final LocalStorageService _storage;
-
-  FavoritesNotifier(this._storage) : super(_storage.getFavorites());
+  FavoritesNotifier() : super(LocalStorageService.getFavorites());
 
   Future<void> toggleFavorite(WallpaperModel wallpaper) async {
-    if (_storage.isFavorite(wallpaper.id)) {
-      await _storage.removeFromFavorites(wallpaper.id);
+    if (LocalStorageService.isFavorite(wallpaper.id)) {
+      await LocalStorageService.removeFromFavorites(wallpaper.id);
     } else {
-      await _storage.addToFavorites(wallpaper);
+      await LocalStorageService.addToFavorites(wallpaper);
     }
-    state = _storage.getFavorites();
+    state = LocalStorageService.getFavorites();
+  }
+
+  Future<void> toggleLocalFavorite(File file) async {
+    final id = 'local_${file.path.hashCode}';
+    if (LocalStorageService.isFavorite(id)) {
+      final existing = state.firstWhere((w) => w.id == id);
+      if (existing.url.contains('custom_wallpapers')) {
+        try {
+          final f = File(existing.url);
+          if (await f.exists()) await f.delete();
+        } catch (_) {}
+      }
+      await LocalStorageService.removeFromFavorites(id);
+    } else {
+      // Copy to internal storage
+      final appDir = await getApplicationDocumentsDirectory();
+      final customDir = Directory('${appDir.path}/custom_wallpapers');
+      if (!await customDir.exists()) await customDir.create();
+
+      final fileName =
+          'custom_${DateTime.now().millisecondsSinceEpoch}.${file.path.split('.').last}';
+      final newFile = await file.copy('${customDir.path}/$fileName');
+
+      final localWallpaper = WallpaperModel(
+        id: id,
+        type: 'static',
+        url: newFile.path,
+        category: 'Custom',
+      );
+      await LocalStorageService.addToFavorites(localWallpaper);
+    }
+    state = LocalStorageService.getFavorites();
   }
 
   bool isFavorite(String id) {
-    return _storage.isFavorite(id);
+    return LocalStorageService.isFavorite(id);
   }
 }
 
 final favoritesProvider =
     StateNotifierProvider<FavoritesNotifier, List<WallpaperModel>>((ref) {
-      return FavoritesNotifier(ref.watch(localStorageServiceProvider));
+      return FavoritesNotifier();
     });
