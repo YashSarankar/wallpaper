@@ -19,12 +19,13 @@ class WallpaperCard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
+        final heroTag = '${wallpaper.id}_${context.hashCode}';
         Navigator.push(
           context,
           PageRouteBuilder(
             transitionDuration: const Duration(milliseconds: 500),
             pageBuilder: (context, animation, secondaryAnimation) =>
-                WallpaperPreviewScreen(wallpaper: wallpaper),
+                WallpaperPreviewScreen(wallpaper: wallpaper, heroTag: heroTag),
             transitionsBuilder:
                 (context, animation, secondaryAnimation, child) {
                   return FadeTransition(opacity: animation, child: child);
@@ -48,13 +49,14 @@ class WallpaperCard extends ConsumerWidget {
           child: Stack(
             children: [
               Hero(
-                tag: wallpaper.id,
+                tag: '${wallpaper.id}_${context.hashCode}',
                 child: AspectRatio(
                   aspectRatio: 0.7,
                   child: UniversalImage(
                     path: wallpaper.midUrl ?? wallpaper.url,
                     thumbnailUrl: wallpaper.lowUrl,
                     fit: BoxFit.cover,
+                    borderRadius: 28,
                   ),
                 ),
               ),

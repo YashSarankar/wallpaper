@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'data/services/local_storage_service.dart';
 import 'presentation/providers/wallpaper_provider.dart';
-import 'presentation/screens/home_screen.dart'; // We'll create this next
+import 'presentation/screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +18,7 @@ class MyApp extends ConsumerWidget {
     final isDarkMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Amozea',
+      title: 'Amozea – AMOLED & 4K Wallpapers',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -35,7 +35,7 @@ class MyApp extends ConsumerWidget {
         ),
       ),
       themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      home: const HomeScreen(),
+      home: const SplashScreen(),
     );
   }
 }

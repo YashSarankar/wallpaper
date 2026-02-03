@@ -15,8 +15,13 @@ import '../providers/wallpaper_provider.dart';
 
 class WallpaperPreviewScreen extends ConsumerStatefulWidget {
   final WallpaperModel wallpaper;
+  final String? heroTag;
 
-  const WallpaperPreviewScreen({super.key, required this.wallpaper});
+  const WallpaperPreviewScreen({
+    super.key,
+    required this.wallpaper,
+    this.heroTag,
+  });
 
   @override
   ConsumerState<WallpaperPreviewScreen> createState() =>
@@ -299,6 +304,7 @@ class _WallpaperPreviewScreenState
   Widget build(BuildContext context) {
     final favorites = ref.watch(favoritesProvider);
     final isFav = favorites.any((w) => w.id == widget.wallpaper.id);
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -310,37 +316,78 @@ class _WallpaperPreviewScreenState
               maxScale: 3.0,
               boundaryMargin: EdgeInsets.zero,
               child: Hero(
-                tag: widget.wallpaper.id,
+                tag: widget.heroTag ?? widget.wallpaper.id,
                 child: UniversalImage(
                   path: _highResUrl,
                   thumbnailUrl: widget.wallpaper.lowUrl,
                   fit: BoxFit.cover,
                   placeholder: const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
                   ),
                   errorWidget: const Center(
                     child: Icon(
                       CupertinoIcons.exclamationmark_circle,
-                      color: Colors.white,
+                      color: Colors.white24,
+                      size: 40,
                     ),
                   ),
                 ),
               ),
             ),
           ),
-          // Tap to Toggle UI
+
+          // Tap to Toggle UI Overlay (Transparent layer)
           Positioned.fill(
             child: GestureDetector(
               onTap: () => setState(() => _showPreviewUI = !_showPreviewUI),
             ),
           ),
 
-          // iOS Style Lock Screen Preview Overlay
-          if (_showPreviewUI)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 60,
-              left: 0,
-              right: 0,
+          // Top Header (Back & Share)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOutBack,
+            top: _showPreviewUI ? 0 : -100,
+            left: 0,
+            right: 0,
+            child: Container(
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 10,
+                left: 16,
+                right: 16,
+                bottom: 20,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildBlurButton(
+                    icon: CupertinoIcons.back,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  _buildBlurButton(
+                    icon: CupertinoIcons.share,
+                    onTap: _shareWallpaper,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // iOS Style Lock Screen Preview (Time & Date)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOutCubic,
+            top: _showPreviewUI
+                ? MediaQuery.of(context).padding.top + 70
+                : -200,
+            left: 0,
+            right: 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 300),
+              opacity: _showPreviewUI ? 1.0 : 0.0,
               child: IgnorePointer(
                 child: Column(
                   children: [
@@ -348,20 +395,26 @@ class _WallpaperPreviewScreenState
                       _getTime(),
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 80,
+                        fontSize: 86,
                         fontWeight: FontWeight.w200,
+                        letterSpacing: -2,
                         shadows: [
-                          Shadow(blurRadius: 20, color: Colors.black45),
+                          Shadow(
+                            blurRadius: 30,
+                            color: Colors.black45,
+                            offset: Offset(0, 4),
+                          ),
                         ],
                       ),
                     ),
                     Text(
-                      _getDate(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w400,
-                        shadows: [
+                      _getDate().toUpperCase(),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 2,
+                        shadows: const [
                           Shadow(blurRadius: 20, color: Colors.black45),
                         ],
                       ),
@@ -370,94 +423,54 @@ class _WallpaperPreviewScreenState
                 ),
               ),
             ),
+          ),
 
-          // Top Action Bar (iOS Style)
-          if (_showPreviewUI)
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top,
-                  left: 10,
-                  right: 10,
-                  bottom: 10,
-                ),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.black.withOpacity(0.5), Colors.transparent],
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        CupertinoIcons.back,
-                        color: Colors.white,
-                      ),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    IconButton(
-                      icon: const Icon(
-                        CupertinoIcons.share,
-                        color: Colors.white,
-                      ),
-                      onPressed: _shareWallpaper,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Bottom Glassmorphic Actions
-          if (_showPreviewUI)
-            Positioned(
-              bottom: 40,
-              left: 30,
-              right: 30,
+          // Bottom Action Bar (Integrated)
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 350),
+            curve: Curves.easeOutBack,
+            bottom: _showPreviewUI ? 40 : -120,
+            left: 20,
+            right: 20,
+            child: Center(
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(40),
+                borderRadius: BorderRadius.circular(35),
                 child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
                   child: Container(
-                    height: 80,
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    height: 70,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(40),
-                      border: Border.all(color: Colors.white.withOpacity(0.2)),
+                      color: Colors.black.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(35),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.15),
+                        width: 0.5,
+                      ),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        _buildIconButton(
+                        _buildActionIcon(
                           icon: CupertinoIcons.cloud_download,
-                          label: 'Download',
                           onTap: _progress != null ? null : _downloadWallpaper,
                           isLoading: _progress != null,
                         ),
-                        _buildSetButton(),
-                        _buildIconButton(
+                        const SizedBox(width: 4),
+                        _buildSetAction(),
+                        const SizedBox(width: 4),
+                        _buildActionIcon(
                           icon: isFav
                               ? CupertinoIcons.heart_fill
                               : CupertinoIcons.heart,
-                          label: 'Favorite',
-                          color: isFav ? Colors.red : Colors.white,
-                          onTap: () => ref
-                              .read(favoritesProvider.notifier)
-                              .toggleFavorite(widget.wallpaper),
-                        ),
-                        _buildIconButton(
-                          icon: _showPreviewUI
-                              ? CupertinoIcons.eye_slash
-                              : CupertinoIcons.eye,
-                          label: 'Preview',
-                          onTap: () =>
-                              setState(() => _showPreviewUI = !_showPreviewUI),
+                          activeColor: Colors.redAccent,
+                          isActive: isFav,
+                          onTap: () {
+                            ref
+                                .read(favoritesProvider.notifier)
+                                .toggleFavorite(widget.wallpaper);
+                            HapticFeedback.mediumImpact();
+                          },
                         ),
                       ],
                     ),
@@ -465,39 +478,38 @@ class _WallpaperPreviewScreenState
                 ),
               ),
             ),
+          ),
 
           // Progress Overlay
           if (_progress != null)
-            Positioned.fill(
-              child: Container(
-                color: Colors.black54,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 50),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: LinearProgressIndicator(
-                            value: _progress,
-                            minHeight: 8,
-                            backgroundColor: Colors.white24,
-                            color: Colors.white,
-                          ),
-                        ),
+            Positioned(
+              bottom: 120,
+              left: 50,
+              right: 50,
+              child: Column(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: LinearProgressIndicator(
+                      value: _progress,
+                      minHeight: 4,
+                      backgroundColor: Colors.white10,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Colors.white,
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Downloading ${(_progress! * 100).toInt()}%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'DOWNLOADING ${(_progress! * 100).toInt()}%',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
@@ -505,72 +517,111 @@ class _WallpaperPreviewScreenState
     );
   }
 
-  Widget _buildIconButton({
+  Widget _buildBlurButton({
     required IconData icon,
-    required String label,
-    required VoidCallback? onTap,
-    bool isLoading = false,
-    Color color = Colors.white,
+    required VoidCallback onTap,
   }) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(30),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            isLoading
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Icon(icon, color: color, size: 28),
-
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white, fontSize: 10),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.3),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.15)),
             ),
-          ],
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildSetButton() {
-    return ElevatedButton(
-      onPressed: _isSetting ? null : _showSetWallpaperOptions,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        elevation: 0,
+  Widget _buildActionIcon({
+    required IconData icon,
+    required VoidCallback? onTap,
+    bool isLoading = false,
+    bool isActive = false,
+    Color activeColor = Colors.white,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(30),
+      child: Container(
+        width: 58,
+        height: 58,
+        child: Center(
+          child: isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : Icon(
+                  icon,
+                  color: isActive ? activeColor : Colors.white.withOpacity(0.9),
+                  size: 26,
+                ),
+        ),
       ),
-      child: _isSetting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.black,
-              ),
-            )
-          : const Text(
-              'Set',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    );
+  }
+
+  Widget _buildSetAction() {
+    return GestureDetector(
+      onTap: _isSetting ? null : _showSetWallpaperOptions,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        height: 54,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(27),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
+          ],
+        ),
+        child: Center(
+          child: _isSetting
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.black,
+                  ),
+                )
+              : const Text(
+                  'APPLY',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+        ),
+      ),
     );
   }
 
   String _getTime() {
     final now = DateTime.now();
-    return '${now.hour}:${now.minute.toString().padLeft(2, '0')}';
+    final hour = now.hour > 12
+        ? now.hour - 12
+        : (now.hour == 0 ? 12 : now.hour);
+    return '$hour:${now.minute.toString().padLeft(2, '0')}';
   }
 
   String _getDate() {

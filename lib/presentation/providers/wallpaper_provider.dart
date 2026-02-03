@@ -21,6 +21,31 @@ final wallpapersProvider = FutureProvider<List<CategoryModel>>((ref) async {
   return ref.watch(wallpaperRepositoryProvider).getWallpapers();
 });
 
+// Derived Providers
+final allWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
+  final wallpapersAsync = ref.watch(wallpapersProvider);
+  return wallpapersAsync.maybeWhen(
+    data: (categories) => categories.expand((c) => c.wallpapers).toList(),
+    orElse: () => [],
+  );
+});
+
+final randomWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
+  final all = [...ref.watch(allWallpapersProvider)];
+  all.shuffle();
+  return all;
+});
+
+final latestWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
+  // Assuming the order delivered by API is already sorted by newest
+  return ref.watch(allWallpapersProvider);
+});
+
+final trendingWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
+  final all = ref.watch(allWallpapersProvider);
+  return all.where((w) => w.category.toLowerCase() == 'trending').toList();
+});
+
 class ThemeNotifier extends StateNotifier<bool> {
   final LocalStorageService _storage;
 

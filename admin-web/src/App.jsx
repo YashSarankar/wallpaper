@@ -142,7 +142,17 @@ const Dashboard = ({ onLogout }) => {
     const [previewUrl, setPreviewUrl] = useState(null);
     const [message, setMessage] = useState(null);
 
-    const categories = ['Nature', 'Space', 'Game', 'Anime', 'Animal', 'Abstract'];
+    const categories = [
+        'Nature',
+        'Space',
+        'Game',
+        'Anime',
+        'Minimal',
+        'AMOLED',
+        'Architecture',
+        'Abstract',
+        'Trending'
+    ];
 
     useEffect(() => {
         fetchWallpapers();

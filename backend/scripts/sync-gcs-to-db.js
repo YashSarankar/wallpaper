@@ -39,8 +39,8 @@ async function syncGcsToDb() {
             const nameOnly = fileName.replace('.jpg', '').replace('.jpeg', '').split('-').pop();
 
             const newWallpaper = new Wallpaper({
-                title: nameOnly || 'Imported Wallpaper',
-                category: 'Imported', // You can change this later in admin panel
+                title: nameOnly || 'Trending Wallpaper',
+                category: 'Trending', // Changed from Imported
                 imageUrl: {
                     original: originalUrl,
                     mid: originalUrl.replace('/original/', '/mid/'),

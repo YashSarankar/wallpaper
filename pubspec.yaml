@@ -1,5 +1,5 @@
 name: wallpaper
-description: "A new Flutter project."
+description: "Amozea – AMOLED & 4K Wallpapers - A premium wallpaper app."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -55,6 +55,7 @@ dependencies:
   # UI
   flutter_staggered_grid_view: ^0.7.0
   image_picker: ^1.0.7
+  lottie: ^3.1.0
 
   # Icons
   cupertino_icons: ^1.0.8
@@ -69,6 +70,13 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/applogo.png"
+  min_sdk_android: 21 # android min sdk value
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -83,7 +91,10 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-    # - assets/wallpapers.json
+    - assets/applogo.png
+    - assets/heart.png
+    - assets/settings.png
+    - assets/wallpapers.json
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

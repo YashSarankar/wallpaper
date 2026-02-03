@@ -1,253 +1,238 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Keep this one for SliverMasonryGrid.count
 
 import '../providers/wallpaper_provider.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import '../../core/constants/app_constants.dart';
-import '../widgets/wallpaper_card.dart';
+import 'home_tab.dart';
+import 'trending_tab.dart';
+import 'category_tab.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return const HomeContent();
-  }
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class HomeContent extends ConsumerStatefulWidget {
-  const HomeContent({super.key});
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  int _currentIndex = 0;
 
-  @override
-  ConsumerState<HomeContent> createState() => _HomeContentState();
-}
+  final List<Widget> _tabs = [
+    const HomeTab(),
+    const TrendingTab(),
+    const CategoryTab(),
+  ];
 
-class _HomeContentState extends ConsumerState<HomeContent> {
-  String _selectedCategory = 'All';
+  final List<String> _titles = ['Amozea', 'Trending', 'Categories'];
 
   @override
   Widget build(BuildContext context) {
-    final wallpapersAsync = ref.watch(wallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
+    final color = isDarkMode ? Colors.white : Colors.black;
 
-    return Scaffold(
-      backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      body: wallpapersAsync.when(
-        data: (categories) {
-          if (categories.isEmpty) {
-            return const Center(child: Text('No wallpapers found.'));
-          }
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDarkMode
+            ? Brightness.light
+            : Brightness.dark,
+        systemNavigationBarColor: isDarkMode ? Colors.black : Colors.white,
+        systemNavigationBarIconBrightness: isDarkMode
+            ? Brightness.light
+            : Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: (isDarkMode ? Colors.black : Colors.white),
+        body: Stack(
+          children: [
+            // Content
+            IndexedStack(index: _currentIndex, children: _tabs),
 
-          final allWallpapers = categories.expand((c) => c.wallpapers).toList();
-          final displayedWallpapers = _selectedCategory == 'All'
-              ? allWallpapers
-              : allWallpapers
-                    .where((w) => w.category == _selectedCategory)
-                    .toList();
-
-          final allCategories = ['All', ...categories.map((c) => c.name)];
-
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // iOS Style Integrated Header
-              SliverAppBar(
-                floating: true,
-                pinned: true,
-                backgroundColor: isDarkMode ? Colors.black : Colors.white,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                automaticallyImplyLeading: false,
-                titleSpacing: 20,
-                title: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      AppConstants.appName,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 22,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    Row(
+            // Custom AppBar Over Content
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    height: 90, // Reduced from 100
+                    padding: const EdgeInsets.fromLTRB(
+                      20,
+                      48,
+                      20,
+                      0,
+                    ), // Adjusted top padding
+                    color: (isDarkMode ? Colors.black : Colors.white)
+                        .withOpacity(0.7),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            CupertinoIcons.heart,
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            size: 24,
+                        Text(
+                          _currentIndex == 0
+                              ? AppConstants.appName
+                              : _titles[_currentIndex],
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 24,
+                            letterSpacing: -0.5,
                           ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const FavoritesScreen(),
-                              ),
-                            );
-                          },
                         ),
-                        const SizedBox(width: 16),
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            CupertinoIcons.settings,
-                            color: isDarkMode ? Colors.white : Colors.black,
-                            size: 22,
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const SettingsScreen(),
-                              ),
-                            );
-                          },
+                        Row(
+                          children: [
+                            _buildHeaderIcon(AppConstants.heartIcon, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FavoritesScreen(),
+                                ),
+                              );
+                            }, isDarkMode),
+                            const SizedBox(width: 8), // Reduced from 16
+                            _buildHeaderIcon(AppConstants.settingsIcon, () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(),
+                                ),
+                              );
+                            }, isDarkMode),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
-                ),
-                bottom: PreferredSize(
-                  preferredSize: const Size.fromHeight(54),
-                  child: Container(
-                    height: 54,
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      itemCount: allCategories.length,
-                      itemBuilder: (context, index) {
-                        final category = allCategories[index];
-                        final isSelected = _selectedCategory == category;
-                        return GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedCategory = category),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            margin: const EdgeInsets.only(right: 12),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? (isDarkMode ? Colors.white : Colors.black)
-                                  : (isDarkMode
-                                        ? Colors.white12
-                                        : Colors.grey[100]),
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                            child: Center(
-                              child: Text(
-                                category,
-                                style: TextStyle(
-                                  color: isSelected
-                                      ? (isDarkMode
-                                            ? Colors.black
-                                            : Colors.white)
-                                      : (isDarkMode
-                                            ? Colors.white60
-                                            : Colors.black54),
-                                  fontWeight: isSelected
-                                      ? FontWeight.w800
-                                      : FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
                     ),
                   ),
                 ),
               ),
+            ),
 
-              // Grid with Premium Aspect Ratio
-              displayedWallpapers.isEmpty
-                  ? SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              CupertinoIcons.photo,
-                              size: 64,
-                              color: isDarkMode
-                                  ? Colors.white24
-                                  : Colors.black12,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'No wallpapers in this category',
-                              style: TextStyle(
-                                color: isDarkMode
-                                    ? Colors.white60
-                                    : Colors.black54,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
+            // iOS Style Glassmorphic Bottom Navigation
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 25, sigmaY: 25),
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(context).padding.bottom + 8,
+                      top: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? Colors.black : Colors.white)
+                          .withOpacity(0.75),
+                      border: Border(
+                        top: BorderSide(
+                          color: (isDarkMode ? Colors.white : Colors.black)
+                              .withOpacity(0.08),
+                          width: 0.5,
                         ),
                       ),
-                    )
-                  : SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
-                      sliver: SliverMasonryGrid.count(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 20,
-                        crossAxisSpacing: 20,
-                        itemBuilder: (context, index) {
-                          final wallpaper = displayedWallpapers[index];
-                          return WallpaperCard(wallpaper: wallpaper);
-                        },
-                        childCount: displayedWallpapers.length,
-                      ),
                     ),
-            ],
-          );
-        },
-        loading: () => Center(
-          child: CircularProgressIndicator(
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-        ),
-        error: (err, stack) => Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(
-                CupertinoIcons.exclamationmark_circle,
-                size: 48,
-                color: Colors.grey,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                err.toString(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: isDarkMode ? Colors.white70 : Colors.black54,
-                  fontSize: 12,
+                    child: Row(
+                      children: [
+                        _buildNavItem(
+                          0,
+                          CupertinoIcons.house_fill,
+                          CupertinoIcons.house,
+                          'Home',
+                        ),
+                        _buildNavItem(
+                          1,
+                          CupertinoIcons.flame_fill,
+                          CupertinoIcons.flame,
+                          'Trending',
+                        ),
+                        _buildNavItem(
+                          2,
+                          CupertinoIcons.square_grid_2x2_fill,
+                          CupertinoIcons.square_grid_2x2,
+                          'Categories',
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-              TextButton(
-                onPressed: () => ref.refresh(wallpapersProvider),
-                child: const Text('Try Again'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderIcon(String asset, VoidCallback onTap, bool isDarkMode) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(
+          10,
+        ), // Increased slightly for better tap area while compact
+        decoration: BoxDecoration(
+          color: (isDarkMode ? Colors.white : Colors.black).withOpacity(0.05),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Image.asset(
+          asset,
+          color: isDarkMode ? Colors.white : Colors.black,
+          width: 20, // Slightly smaller icons
+          height: 20,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(
+    int index,
+    IconData activeIcon,
+    IconData inactiveIcon,
+    String label,
+  ) {
+    final isSelected = _currentIndex == index;
+    final isDarkMode = ref.watch(themeProvider);
+    final activeColor = isDarkMode ? Colors.white : Colors.black;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (!isSelected) {
+            setState(() => _currentIndex = index);
+            HapticFeedback.selectionClick();
+          }
+        },
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedScale(
+              duration: const Duration(milliseconds: 200),
+              scale: isSelected ? 1.05 : 1.0,
+              child: Icon(
+                isSelected ? activeIcon : inactiveIcon,
+                color: isSelected ? activeColor : activeColor.withOpacity(0.4),
+                size: 24,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? activeColor : activeColor.withOpacity(0.4),
+                fontSize: 10,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
         ),
       ),
     );

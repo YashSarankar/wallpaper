@@ -11,6 +11,8 @@ class AppConstants {
 
   // Assets
   static const String placeholderImage = 'assets/images/placeholder.png';
+  static const String heartIcon = 'assets/heart.png';
+  static const String settingsIcon = 'assets/settings.png';
   static const String localWallpaperJson = 'assets/wallpapers.json';
 
   // Remote Config (Example URL, replace with actual)

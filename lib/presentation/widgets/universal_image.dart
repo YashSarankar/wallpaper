@@ -6,6 +6,7 @@ class UniversalImage extends StatelessWidget {
   final String path;
   final String? thumbnailUrl;
   final BoxFit fit;
+  final double? borderRadius;
   final Widget? placeholder;
   final Widget? errorWidget;
 
@@ -14,14 +15,16 @@ class UniversalImage extends StatelessWidget {
     required this.path,
     this.thumbnailUrl,
     this.fit = BoxFit.cover,
+    this.borderRadius,
     this.placeholder,
     this.errorWidget,
   });
 
   @override
   Widget build(BuildContext context) {
+    Widget imageWidget;
     if (path.startsWith('http')) {
-      return CachedNetworkImage(
+      imageWidget = CachedNetworkImage(
         imageUrl: path,
         fit: fit,
         fadeInDuration: const Duration(milliseconds: 500),
@@ -39,7 +42,7 @@ class UniversalImage extends StatelessWidget {
             errorWidget ?? _buildErrorPlaceholder(),
       );
     } else {
-      return Image.asset(
+      imageWidget = Image.asset(
         path,
         fit: fit,
         errorBuilder: (context, error, stackTrace) {
@@ -47,6 +50,15 @@ class UniversalImage extends StatelessWidget {
         },
       );
     }
+
+    if (borderRadius != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius!),
+        child: imageWidget,
+      );
+    }
+
+    return imageWidget;
   }
 
   Widget _buildShimmerPlaceholder() {
