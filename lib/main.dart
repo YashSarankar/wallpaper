@@ -18,7 +18,7 @@ class MyApp extends ConsumerWidget {
     final isDarkMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Amozea – AMOLED & 4K Wallpapers',
+      title: 'Amozea – AMOLED Wallpapers',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

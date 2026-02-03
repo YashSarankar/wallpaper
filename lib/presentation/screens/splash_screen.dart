@@ -185,7 +185,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 onLoaded: (composition) {
                                   _lottieController
                                     ..duration = composition.duration
-                                    ..forward().then((_) => _navigateToHome());
+                                    ..forward().then((_) async {
+                                      // Wait for data to be ready before navigating
+                                      await ref.read(wallpapersProvider.future);
+                                      _navigateToHome();
+                                    });
                                 },
                               ),
                             ),

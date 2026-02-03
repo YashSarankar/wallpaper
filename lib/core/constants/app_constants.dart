@@ -1,6 +1,6 @@
 class AppConstants {
   // App Info
-  static const String appName = 'Amozea';
+  static const String appName = 'Amozea – AMOLED Wallpapers';
   static const String appVersion = '1.0.0';
 
   // Storage Keys

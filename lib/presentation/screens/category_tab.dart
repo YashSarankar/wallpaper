@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wallpaper_provider.dart';
-import '../widgets/wallpaper_card.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../data/models/wallpaper_model.dart';
 import 'package:flutter/cupertino.dart';
+import '../widgets/universal_image.dart';
+import 'wallpaper_preview_screen.dart';
 
 class CategoryTab extends ConsumerWidget {
   const CategoryTab({super.key});
@@ -107,10 +108,14 @@ class CategoryDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(
           category.name,
-          style: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
+          style: TextStyle(
+            color: isDarkMode ? Colors.white : Colors.black,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
           icon: Icon(
             CupertinoIcons.back,
@@ -123,18 +128,61 @@ class CategoryDetailScreen extends ConsumerWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverPadding(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
             sliver: SliverMasonryGrid.count(
               crossAxisCount: 2,
-              mainAxisSpacing: 20,
-              crossAxisSpacing: 20,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
               itemBuilder: (context, index) {
-                return WallpaperCard(wallpaper: category.wallpapers[index]);
+                return _CategoryWallpaperCard(
+                  wallpaper: category.wallpapers[index],
+                );
               },
               childCount: category.wallpapers.length,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _CategoryWallpaperCard extends StatelessWidget {
+  final WallpaperModel wallpaper;
+
+  const _CategoryWallpaperCard({required this.wallpaper});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        final heroTag = '${wallpaper.id}_category_${context.hashCode}';
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            transitionDuration: const Duration(milliseconds: 500),
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                WallpaperPreviewScreen(wallpaper: wallpaper, heroTag: heroTag),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
+          ),
+        );
+      },
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Hero(
+          tag: '${wallpaper.id}_category_${context.hashCode}',
+          child: AspectRatio(
+            aspectRatio: 1, // Square aspect ratio for categories
+            child: UniversalImage(
+              path: wallpaper.midUrl ?? wallpaper.url,
+              thumbnailUrl: wallpaper.lowUrl,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -76,7 +76,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Text(
                           _currentIndex == 0
-                              ? AppConstants.appName
+                              ? 'Amozea'
                               : _titles[_currentIndex],
                           style: TextStyle(
                             color: color,
