@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/wallpaper_provider.dart';
+import '../providers/settings_provider.dart';
 import '../widgets/wallpaper_card.dart';
 
 class TrendingTab extends ConsumerWidget {
@@ -12,6 +13,7 @@ class TrendingTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendingWallpapers = ref.watch(trendingWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
+    final settings = ref.watch(settingsProvider);
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -46,9 +48,9 @@ class TrendingTab extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
             sliver: SliverMasonryGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              crossAxisCount: settings.gridColumns,
+              mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+              crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
               itemBuilder: (context, index) {
                 return WallpaperCard(wallpaper: trendingWallpapers[index]);
               },

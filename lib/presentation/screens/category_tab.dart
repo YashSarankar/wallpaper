@@ -6,6 +6,9 @@ import '../../data/models/wallpaper_model.dart';
 import 'package:flutter/cupertino.dart';
 import '../widgets/universal_image.dart';
 import 'wallpaper_preview_screen.dart';
+import '../providers/settings_provider.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
 
 class CategoryTab extends ConsumerWidget {
   const CategoryTab({super.key});
@@ -14,6 +17,7 @@ class CategoryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final wallpapersAsync = ref.watch(wallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
+    final settings = ref.watch(settingsProvider);
 
     return wallpapersAsync.when(
       data: (categories) {
@@ -21,72 +25,167 @@ class CategoryTab extends ConsumerWidget {
           physics: const BouncingScrollPhysics(),
           slivers: [
             const SliverToBoxAdapter(child: SizedBox(height: 100)),
-            SliverList(
-              delegate: SliverChildBuilderDelegate((context, index) {
-                final category = categories[index];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: _CategoryItem(
-                    category: category,
-                    isDarkMode: isDarkMode,
-                  ),
-                );
-              }, childCount: categories.length),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: settings.gridColumns,
+                  mainAxisSpacing: settings.gridColumns == 2 ? 16 : 10,
+                  crossAxisSpacing: settings.gridColumns == 2 ? 16 : 10,
+                  childAspectRatio: settings.gridColumns == 2 ? 0.85 : 0.75,
+                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final category = categories[index];
+                  return TweenAnimationBuilder<double>(
+                    duration: Duration(milliseconds: 400 + (index * 60)),
+                    tween: Tween(begin: 0.0, end: 1.0),
+                    curve: Curves.easeOutQuart,
+                    builder: (context, value, child) {
+                      return Opacity(
+                        opacity: value,
+                        child: Transform.translate(
+                          offset: Offset(0, 30 * (1 - value)),
+                          child: _CategoryItem(
+                            category: category,
+                            isDarkMode: isDarkMode,
+                            isCompact: settings.gridColumns == 3,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }, childCount: categories.length),
+              ),
             ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ), // Bottom padding for nav bar
+            const SliverToBoxAdapter(child: SizedBox(height: 110)),
           ],
         );
       },
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const Center(child: CupertinoActivityIndicator()),
       error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 }
 
-class _CategoryItem extends StatelessWidget {
+class _CategoryItem extends StatefulWidget {
   final CategoryModel category;
   final bool isDarkMode;
+  final bool isCompact;
 
-  const _CategoryItem({required this.category, required this.isDarkMode});
+  const _CategoryItem({
+    required this.category,
+    required this.isDarkMode,
+    this.isCompact = false,
+  });
+
+  @override
+  State<_CategoryItem> createState() => _CategoryItemState();
+}
+
+class _CategoryItemState extends State<_CategoryItem> {
+  bool _isPressed = false;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
       onTap: () {
+        HapticFeedback.lightImpact();
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => CategoryDetailScreen(category: category),
+          CupertinoPageRoute(
+            builder: (context) =>
+                CategoryDetailScreen(category: widget.category),
           ),
         );
       },
-      child: Container(
-        height: 120,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          image: category.wallpapers.isNotEmpty
-              ? DecorationImage(
-                  image: NetworkImage(category.wallpapers.first.url),
-                  fit: BoxFit.cover,
-                  colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.4),
-                    BlendMode.darken,
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 200),
+        scale: _isPressed ? 0.94 : 1.0,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.isCompact ? 24 : 32),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.12),
+                blurRadius: widget.isCompact ? 15 : 25,
+                offset: Offset(0, widget.isCompact ? 6 : 12),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(widget.isCompact ? 24 : 32),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background Image
+                if (widget.category.wallpapers.isNotEmpty)
+                  UniversalImage(
+                    path:
+                        widget.category.wallpapers.first.midUrl ??
+                        widget.category.wallpapers.first.url,
+                    fit: BoxFit.cover,
+                  )
+                else
+                  Container(
+                    color: widget.isDarkMode
+                        ? Colors.white10
+                        : Colors.grey[200],
                   ),
-                )
-              : null,
-          color: isDarkMode ? Colors.white10 : Colors.grey[200],
-        ),
-        child: Center(
-          child: Text(
-            category.name.toUpperCase(),
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2,
+
+                // Premium Gradient Overlay
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: const [0.4, 1.0],
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.85),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Category Name
+                Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child: Container(
+                    padding: EdgeInsets.all(widget.isCompact ? 12 : 20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          widget.category.name,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: widget.isCompact ? 14 : 18,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (!widget.isCompact) ...[
+                          const SizedBox(height: 4),
+                          Container(
+                            width: 20,
+                            height: 3,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -103,36 +202,51 @@ class CategoryDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = ref.watch(themeProvider);
+    final settings = ref.watch(settingsProvider);
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
-      appBar: AppBar(
-        title: Text(
-          category.name,
-          style: TextStyle(
-            color: isDarkMode ? Colors.white : Colors.black,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            CupertinoIcons.back,
-            color: isDarkMode ? Colors.white : Colors.black,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
+            pinned: true,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            backgroundColor: (isDarkMode ? Colors.black : Colors.white)
+                .withOpacity(0.8),
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: true,
+              title: Text(
+                category.name,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 18,
+                ),
+              ),
+              background: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
+            leading: IconButton(
+              icon: Icon(
+                CupertinoIcons.back,
+                color: isDarkMode ? Colors.white : Colors.black,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
           SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
             sliver: SliverMasonryGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
+              crossAxisCount: settings.gridColumns,
+              mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+              crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
               itemBuilder: (context, index) {
                 return _CategoryWallpaperCard(
                   wallpaper: category.wallpapers[index],
@@ -170,12 +284,21 @@ class _CategoryWallpaperCard extends StatelessWidget {
           ),
         );
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Hero(
-          tag: '${wallpaper.id}_category_${context.hashCode}',
-          child: AspectRatio(
-            aspectRatio: 1, // Square aspect ratio for categories
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Hero(
+            tag: '${wallpaper.id}_category_${context.hashCode}',
             child: UniversalImage(
               path: wallpaper.midUrl ?? wallpaper.url,
               thumbnailUrl: wallpaper.lowUrl,
