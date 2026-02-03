@@ -408,14 +408,14 @@ const Dashboard = ({ onLogout }) => {
                                 <p>Syncing gallery...</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3">
                                 {filteredWallpapers.map((wp) => (
                                     <motion.div
                                         layout
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         key={wp._id}
-                                        className="group glass rounded-2xl overflow-hidden aspect-[3/4] relative"
+                                        className="group glass rounded-xl overflow-hidden aspect-square relative"
                                     >
                                         <img
                                             src={wp.imageUrl.low || wp.imageUrl.original}
