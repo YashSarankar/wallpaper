@@ -7,6 +7,7 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; /
 import '../providers/wallpaper_provider.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
+import '../../core/constants/app_constants.dart';
 import '../widgets/wallpaper_card.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -66,7 +67,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Wallpapers',
+                      AppConstants.appName,
                       style: TextStyle(
                         color: isDarkMode ? Colors.white : Colors.black,
                         fontWeight: FontWeight.w700,
@@ -234,9 +235,11 @@ class _HomeContentState extends ConsumerState<HomeContent> {
               ),
               const SizedBox(height: 16),
               Text(
-                'Something went wrong',
+                err.toString(),
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isDarkMode ? Colors.white : Colors.black,
+                  color: isDarkMode ? Colors.white70 : Colors.black54,
+                  fontSize: 12,
                 ),
               ),
               TextButton(
