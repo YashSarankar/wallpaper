@@ -33,7 +33,7 @@ class _WallpaperPreviewScreenState
   bool _isSetting = false;
   double? _progress;
   bool _showPreviewUI = true;
-  static const platform = MethodChannel('com.example.wallpaper/wallpaper');
+  static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 
   String get _highResUrl {
     String url = widget.wallpaper.url;

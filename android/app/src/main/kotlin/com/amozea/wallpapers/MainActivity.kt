@@ -1,4 +1,4 @@
-package com.example.wallpaper
+package com.amozea.wallpapers
 
 import android.app.WallpaperManager
 import android.content.Intent
@@ -17,7 +17,7 @@ import java.io.File
 import java.io.IOException
 
 class MainActivity: FlutterActivity() {
-    private val CHANNEL = "com.example.wallpaper/wallpaper"
+    private val CHANNEL = "com.amozea.wallpapers/wallpaper"
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)

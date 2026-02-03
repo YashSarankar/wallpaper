@@ -132,6 +132,7 @@ const Dashboard = ({ onLogout }) => {
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterCategory, setFilterCategory] = useState('All');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
 
@@ -181,10 +182,12 @@ const Dashboard = ({ onLogout }) => {
         }
     };
 
-    const filteredWallpapers = wallpapers.filter(wp =>
-        wp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        wp.category?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredWallpapers = wallpapers.filter(wp => {
+        const matchesSearch = wp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            wp.category?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesCategory = filterCategory === 'All' || wp.category === filterCategory;
+        return matchesSearch && matchesCategory;
+    });
 
     const handleDrag = (e) => {
         e.preventDefault();
@@ -377,15 +380,25 @@ const Dashboard = ({ onLogout }) => {
                                     Live Gallery
                                 </h2>
                             </div>
-                            <div className="relative w-full sm:w-64">
-                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-                                <input
-                                    type="text"
-                                    placeholder="Search title or category..."
-                                    className="pl-10 text-sm py-2"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
+                            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                                <select
+                                    value={filterCategory}
+                                    onChange={(e) => setFilterCategory(e.target.value)}
+                                    className="text-xs font-bold py-2 w-full sm:w-40 border-none bg-indigo-500/10 text-indigo-300 rounded-xl cursor-pointer hover:bg-indigo-500/20 transition-all"
+                                >
+                                    <option value="All">All Categories</option>
+                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                </select>
+                                <div className="relative w-full sm:w-64">
+                                    <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search title..."
+                                        className="pl-10 text-sm py-2"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
                             </div>
                         </div>
 

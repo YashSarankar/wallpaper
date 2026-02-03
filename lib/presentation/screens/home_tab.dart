@@ -18,6 +18,7 @@ class HomeTab extends ConsumerWidget {
     final latestWallpapers = ref.watch(latestWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
+    final wallpapersAsync = ref.watch(wallpapersProvider);
 
     final displayedWallpapers = selectedSubTab == 0
         ? latestWallpapers
@@ -87,28 +88,73 @@ class HomeTab extends ConsumerWidget {
           ),
         ),
 
-        if (displayedWallpapers.isEmpty)
-          SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator(color: color)),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(
-              16,
-              5,
-              16,
-              120,
-            ), // Reduced horizontal and top padding
-            sliver: SliverMasonryGrid.count(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12, // Reduced from 20
-              crossAxisSpacing: 12, // Reduced from 20
-              itemBuilder: (context, index) {
-                return WallpaperCard(wallpaper: displayedWallpapers[index]);
-              },
-              childCount: displayedWallpapers.length,
+        wallpapersAsync.when(
+          data: (categories) {
+            if (displayedWallpapers.isEmpty) {
+              return const SliverFillRemaining(
+                child: Center(child: Text('No wallpapers found')),
+              );
+            }
+            return SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                itemBuilder: (context, index) {
+                  return WallpaperCard(wallpaper: displayedWallpapers[index]);
+                },
+                childCount: displayedWallpapers.length,
+              ),
+            );
+          },
+          loading: () => const SliverFillRemaining(
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (err, stack) => SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    CupertinoIcons.wifi_exclamationmark,
+                    size: 60,
+                    color: color.withOpacity(0.3),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'LOOKS LIKE THE SERVER IS SLEEPING',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: color.withOpacity(0.5),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  CupertinoButton(
+                    color: color,
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    borderRadius: BorderRadius.circular(100),
+                    child: Text(
+                      'WAKE UP',
+                      style: TextStyle(
+                        color: isDarkMode ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 13,
+                      ),
+                    ),
+                    onPressed: () {
+                      ref.invalidate(wallpapersProvider);
+                      HapticFeedback.mediumImpact();
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
+        ),
       ],
     );
   }

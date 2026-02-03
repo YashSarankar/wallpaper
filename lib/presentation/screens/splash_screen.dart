@@ -187,7 +187,19 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                     ..duration = composition.duration
                                     ..forward().then((_) async {
                                       // Wait for data to be ready before navigating
-                                      await ref.read(wallpapersProvider.future);
+                                      try {
+                                        // Wait up to 15 seconds for wallpapers, then proceed anyway
+                                        // The Home screen will handle its own loading/error state
+                                        await ref
+                                            .read(wallpapersProvider.future)
+                                            .timeout(
+                                              const Duration(seconds: 15),
+                                            );
+                                      } catch (e) {
+                                        debugPrint(
+                                          'Pre-fetching wallpapers failed or timed out: $e',
+                                        );
+                                      }
                                       _navigateToHome();
                                     });
                                 },
