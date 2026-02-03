@@ -18,7 +18,7 @@ class MyApp extends ConsumerWidget {
     final isDarkMode = ref.watch(themeProvider);
 
     return MaterialApp(
-      title: 'Flutter Wallpaper',
+      title: 'Amozea',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,

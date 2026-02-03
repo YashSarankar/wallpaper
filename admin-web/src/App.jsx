@@ -80,8 +80,8 @@ const Login = ({ onLogin }) => {
                     <div className="bg-indigo-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <LayoutDashboard size={32} className="text-indigo-400" />
                     </div>
-                    <h1 className="text-2xl font-bold gradient-text">Admin Access</h1>
-                    <p className="text-white/40 text-sm mt-2">Enter credentials to manage WallArt</p>
+                    <h1 className="text-2xl font-bold gradient-text">Amozea Admin</h1>
+                    <p className="text-white/40 text-sm mt-2">Enter credentials to manage Amozea</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -246,8 +246,8 @@ const Dashboard = ({ onLogout }) => {
             {/* Header */}
             <div className="flex justify-between items-center mb-10">
                 <div>
-                    <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">WallArt Admin</h1>
-                    <p className="text-white/40 text-sm">Manage your premium wallpaper collection</p>
+                    <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">Amozea Admin</h1>
+                    <p className="text-white/40 text-sm">Manage your premium AMOLED & 4K collection</p>
                 </div>
                 <button
                     onClick={onLogout}
