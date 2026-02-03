@@ -297,9 +297,8 @@ class _WallpaperPreviewScreenState
 
   @override
   Widget build(BuildContext context) {
-    final isFav = ref
-        .watch(favoritesProvider.notifier)
-        .isFavorite(widget.wallpaper.id);
+    final favorites = ref.watch(favoritesProvider);
+    final isFav = favorites.any((w) => w.id == widget.wallpaper.id);
     return Scaffold(
       backgroundColor: Colors.black,
       body: Stack(
@@ -447,7 +446,7 @@ class _WallpaperPreviewScreenState
                               ? CupertinoIcons.heart_fill
                               : CupertinoIcons.heart,
                           label: 'Favorite',
-                          color: isFav ? Colors.redAccent : Colors.white,
+                          color: isFav ? Colors.red : Colors.white,
                           onTap: () => ref
                               .read(favoritesProvider.notifier)
                               .toggleFavorite(widget.wallpaper),

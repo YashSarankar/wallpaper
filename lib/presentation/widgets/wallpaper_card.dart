@@ -14,9 +14,8 @@ class WallpaperCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isFav = ref
-        .watch(favoritesProvider.notifier)
-        .isFavorite(wallpaper.id);
+    final favorites = ref.watch(favoritesProvider);
+    final isFav = favorites.any((w) => w.id == wallpaper.id);
 
     return GestureDetector(
       onTap: () {
@@ -79,7 +78,7 @@ class WallpaperCard extends ConsumerWidget {
                           isFav
                               ? CupertinoIcons.heart_fill
                               : CupertinoIcons.heart,
-                          color: isFav ? Colors.redAccent : Colors.white,
+                          color: isFav ? Colors.red : Colors.white,
                           size: 20,
                         ),
                       ),
