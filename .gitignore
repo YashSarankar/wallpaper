@@ -15,6 +15,10 @@ node_modules/
 .swiftpm/
 migrate_working_dir/
 
+# Analysis files
+analysis.txt
+analysis_fixed.txt
+
 # IntelliJ related
 *.iml
 *.ipr

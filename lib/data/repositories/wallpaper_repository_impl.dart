@@ -7,8 +7,8 @@ class WallpaperRepositoryImpl implements WallpaperRepository {
   WallpaperRepositoryImpl(this._apiService);
 
   @override
-  Future<List<CategoryModel>> getWallpapers() async {
+  Future<List<CategoryModel>> getWallpapers(String languageCode) async {
     // We now fetch exclusively from the backend
-    return await _apiService.fetchWallpapers();
+    return await _apiService.fetchWallpapers(languageCode);
   }
 }

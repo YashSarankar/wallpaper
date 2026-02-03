@@ -10,6 +10,9 @@ import '../providers/settings_provider.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+import 'package:wallpaper/core/extensions/l10n_extensions.dart';
+
 class CategoryTab extends ConsumerWidget {
   const CategoryTab({super.key});
 
@@ -18,6 +21,7 @@ class CategoryTab extends ConsumerWidget {
     final wallpapersAsync = ref.watch(wallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return wallpapersAsync.when(
       data: (categories) {
@@ -62,7 +66,8 @@ class CategoryTab extends ConsumerWidget {
         );
       },
       loading: () => const Center(child: CupertinoActivityIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
+      error: (err, stack) =>
+          Center(child: Text('${l10n.serverSleeping}: $err')),
     );
   }
 }
@@ -161,7 +166,9 @@ class _CategoryItemState extends State<_CategoryItem> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          widget.category.name,
+                          AppLocalizations.of(
+                            context,
+                          )!.getLocalizedCategory(widget.category.name),
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: widget.isCompact ? 14 : 18,
@@ -219,7 +226,9 @@ class CategoryDetailScreen extends ConsumerWidget {
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: true,
               title: Text(
-                category.name,
+                AppLocalizations.of(
+                  context,
+                )!.getLocalizedCategory(category.name),
                 style: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
                   fontWeight: FontWeight.w800,

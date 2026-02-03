@@ -10,12 +10,10 @@ class AppConstants {
   static const String themeKey = 'is_dark_mode';
 
   // Assets
-  static const String placeholderImage = 'assets/images/placeholder.png';
   static const String heartIcon = 'assets/heart.png';
   static const String settingsIcon = 'assets/settings.png';
-  static const String localWallpaperJson = 'assets/wallpapers.json';
 
-  // Remote Config (Example URL, replace with actual)
+  // Remote Config
   static const String remoteWallpaperJsonUrl =
       'https://wallpaper-api-i7tm.onrender.com/api/wallpapers';
 }

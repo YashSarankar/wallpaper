@@ -4,6 +4,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:wallpaper/l10n/app_localizations.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -24,9 +25,10 @@ class SettingsScreen extends ConsumerWidget {
         }
 
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Added $count photos to rotation!'),
+              content: Text(l10n.addedPhotos(count)),
               behavior: SnackBarBehavior.floating,
               backgroundColor: Colors.green,
             ),
@@ -45,9 +47,10 @@ class SettingsScreen extends ConsumerWidget {
         cacheDir.deleteSync(recursive: true);
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cache cleared successfully!')),
-        );
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.cacheCleared)));
       }
     } catch (e) {
       if (context.mounted) {
@@ -63,6 +66,7 @@ class SettingsScreen extends ConsumerWidget {
     final isDarkMode = ref.watch(themeProvider);
     final settings = ref.watch(settingsProvider);
     final settingsNotifier = ref.read(settingsProvider.notifier);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
@@ -79,7 +83,7 @@ class SettingsScreen extends ConsumerWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Settings',
+          l10n.settings,
           style: TextStyle(
             color: isDarkMode ? Colors.white : Colors.black,
             fontWeight: FontWeight.w700,
@@ -93,14 +97,14 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
 
           // Appearance Section
-          _buildSectionHeader(context, 'Appearance', isDarkMode),
+          _buildSectionHeader(context, l10n.appearance, isDarkMode),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
             icon: isDarkMode
                 ? CupertinoIcons.moon_fill
                 : CupertinoIcons.sun_max_fill,
-            title: 'Dark Mode',
+            title: l10n.darkMode,
             trailing: Switch.adaptive(
               value: isDarkMode,
               activeColor: Colors.blueAccent,
@@ -113,7 +117,7 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.square_grid_2x2,
-            title: 'Grid Layout',
+            title: l10n.gridLayout,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -134,30 +138,65 @@ class SettingsScreen extends ConsumerWidget {
             ),
             isDarkMode: isDarkMode,
           ),
+          const SizedBox(height: 8),
+          _buildSettingsTile(
+            context,
+            icon: CupertinoIcons.globe,
+            title: l10n.language,
+            trailing: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: settings.language,
+                dropdownColor: isDarkMode ? Colors.grey[900] : Colors.white,
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : Colors.black,
+                  fontSize: 13,
+                ),
+                items:
+                    {
+                      'English': 'English',
+                      'Spanish': 'Español',
+                      'French': 'Français',
+                      'Hindi': 'हिन्दी',
+                      'Japanese': '日本語',
+                    }.entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text(entry.value),
+                      );
+                    }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    settingsNotifier.setLanguage(value);
+                  }
+                },
+              ),
+            ),
+            isDarkMode: isDarkMode,
+          ),
 
           const SizedBox(height: 30),
 
           // Automation Section
-          _buildSectionHeader(context, 'Automation', isDarkMode),
+          _buildSectionHeader(context, l10n.automation, isDarkMode),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.refresh_thick,
-            title: 'Auto Change Wallpaper',
-            subtitle: 'Cycles through your Favorites',
+            title: l10n.autoChangeWallpaper,
+            subtitle: l10n.cyclesFavorites,
             trailing: Switch.adaptive(
               value: settings.autoChangeEnabled,
               activeColor: Colors.purpleAccent,
               onChanged: (value) {
                 if (value && ref.read(favoritesProvider).isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please add some wallpapers to Favorites first!',
-                      ),
+                    SnackBar(
+                      content: Text(l10n.addFavoritesFirst),
                       behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.redAccent,
                     ),
                   );
+                  return;
                 }
                 settingsNotifier.setAutoChangeEnabled(value);
               },
@@ -168,8 +207,8 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.add_circled,
-            title: 'Add Your Photos',
-            subtitle: 'Add gallery images to rotation',
+            title: l10n.addYourPhotos,
+            subtitle: l10n.addPhotosRotation,
             trailing: const Icon(
               CupertinoIcons.chevron_right,
               size: 16,
@@ -183,7 +222,7 @@ class SettingsScreen extends ConsumerWidget {
             _buildSettingsTile(
               context,
               icon: CupertinoIcons.clock,
-              title: 'Change Every',
+              title: l10n.changeEvery,
               trailing: DropdownButtonHideUnderline(
                 child: DropdownButton<int>(
                   value:
@@ -234,12 +273,12 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 30),
 
           // Performance Section
-          _buildSectionHeader(context, 'Performance & Data', isDarkMode),
+          _buildSectionHeader(context, l10n.performance, isDarkMode),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.gauge,
-            title: 'Data Saver',
+            title: l10n.dataSaver,
             trailing: Switch.adaptive(
               value: settings.dataSaver,
               activeColor: Colors.greenAccent,
@@ -251,7 +290,7 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.trash,
-            title: 'Clear Cache',
+            title: l10n.clearCache,
             trailing: const Icon(
               CupertinoIcons.chevron_right,
               size: 16,
@@ -264,12 +303,12 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 30),
 
           // Legal Section
-          _buildSectionHeader(context, 'Support & Legal', isDarkMode),
+          _buildSectionHeader(context, l10n.support, isDarkMode),
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.heart,
-            title: 'Rate the App',
+            title: l10n.rateApp,
             trailing: const Icon(
               CupertinoIcons.chevron_right,
               size: 16,
@@ -282,7 +321,7 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: CupertinoIcons.doc_text,
-            title: 'Version',
+            title: l10n.version,
             trailing: Text(
               '1.1.0',
               style: TextStyle(
@@ -301,26 +340,27 @@ class SettingsScreen extends ConsumerWidget {
   void _showClearCacheDialog(BuildContext context) {
     showCupertinoDialog(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text(
-          'This will free up storage by removing temporary images. Wallpapers will reload on next view.',
-        ),
-        actions: [
-          CupertinoDialogAction(
-            child: const Text('Cancel'),
-            onPressed: () => Navigator.pop(context),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () {
-              Navigator.pop(context);
-              _clearCache(context);
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return CupertinoAlertDialog(
+          title: Text(l10n.clearCache),
+          content: Text(l10n.clearCacheDesc),
+          actions: [
+            CupertinoDialogAction(
+              child: Text(l10n.cancel),
+              onPressed: () => Navigator.pop(context),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () {
+                Navigator.pop(context);
+                _clearCache(context);
+              },
+              child: Text(l10n.clear),
+            ),
+          ],
+        );
+      },
     );
   }
 

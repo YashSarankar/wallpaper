@@ -10,9 +10,12 @@ class ApiService {
     ),
   );
 
-  Future<List<CategoryModel>> fetchWallpapers() async {
+  Future<List<CategoryModel>> fetchWallpapers(String languageCode) async {
     try {
-      final response = await _dio.get(AppConstants.remoteWallpaperJsonUrl);
+      final response = await _dio.get(
+        AppConstants.remoteWallpaperJsonUrl,
+        options: Options(headers: {'Accept-Language': languageCode}),
+      );
 
       if (response.statusCode == 200) {
         final List data = response.data;

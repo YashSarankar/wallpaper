@@ -3,13 +3,17 @@ import 'dart:math';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:wallpaper/l10n/app_localizations.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'data/services/local_storage_service.dart';
 import 'data/models/wallpaper_model.dart';
 import 'presentation/providers/wallpaper_provider.dart';
+import 'presentation/providers/settings_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 
 const String autoChangeTask = "com.amozea.wallpapers.autoChange";
@@ -19,27 +23,22 @@ const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      // 1. Initialize services (Hive needs path_provider)
       WidgetsFlutterBinding.ensureInitialized();
-      final dir = await getApplicationDocumentsDirectory();
-      await LocalStorageService.init(); // Assuming it handles Hive.init(dir.path)
+      await LocalStorageService.init();
 
       final prefs = await SharedPreferences.getInstance();
       final isEnabled = prefs.getBool('autoChangeEnabled') ?? false;
       if (!isEnabled) return true;
 
-      // 2. Load Favorites
       final favorites = LocalStorageService.getFavorites();
       if (favorites.isEmpty) return true;
 
-      // 3. Pick Random
       final random = Random();
       final wallpaper = favorites[random.nextInt(favorites.length)];
 
       String? finalPath;
 
       if (wallpaper.url.startsWith('http')) {
-        // 4. Download with Retry & User-Agent
         http.Response? response;
         int retries = 0;
         while (retries < 3) {
@@ -73,13 +72,11 @@ void callbackDispatcher() {
       }
 
       if (finalPath != null && await File(finalPath).exists()) {
-        // 5. Set Wallpaper (Location 3 = Both)
         await platform.invokeMethod('setWallpaper', {
           'path': finalPath,
           'location': 3,
         });
 
-        // 6. Update timestamp
         await prefs.setInt(
           'lastAutoChange',
           DateTime.now().millisecondsSinceEpoch,
@@ -106,13 +103,43 @@ void main() async {
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
+  Locale _getLocale(String language) {
+    switch (language) {
+      case 'Spanish':
+        return const Locale('es');
+      case 'French':
+        return const Locale('fr');
+      case 'Hindi':
+        return const Locale('hi');
+      case 'Japanese':
+        return const Locale('ja');
+      default:
+        return const Locale('en');
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = ref.watch(themeProvider);
+    final settings = ref.watch(settingsProvider);
 
     return MaterialApp(
       title: 'Amozea – AMOLED Wallpapers',
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('hi'),
+        Locale('es'),
+        Locale('fr'),
+        Locale('ja'),
+      ],
+      locale: _getLocale(settings.language),
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(

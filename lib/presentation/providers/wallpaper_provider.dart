@@ -7,6 +7,8 @@ import '../../data/repositories/wallpaper_repository_impl.dart';
 import '../../domain/repositories/wallpaper_repository.dart';
 import '../../data/models/wallpaper_model.dart';
 
+import 'settings_provider.dart';
+
 // Services
 final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
 final localStorageServiceProvider = Provider<LocalStorageService>(
@@ -18,9 +20,26 @@ final wallpaperRepositoryProvider = Provider<WallpaperRepository>((ref) {
   return WallpaperRepositoryImpl(ref.watch(apiServiceProvider));
 });
 
+String _getLangCode(String language) {
+  switch (language) {
+    case 'Spanish':
+      return 'es';
+    case 'French':
+      return 'fr';
+    case 'Hindi':
+      return 'hi';
+    case 'Japanese':
+      return 'ja';
+    default:
+      return 'en';
+  }
+}
+
 // Logic
 final wallpapersProvider = FutureProvider<List<CategoryModel>>((ref) async {
-  return ref.watch(wallpaperRepositoryProvider).getWallpapers();
+  final settings = ref.watch(settingsProvider);
+  final langCode = _getLangCode(settings.language);
+  return ref.watch(wallpaperRepositoryProvider).getWallpapers(langCode);
 });
 
 // Derived Providers

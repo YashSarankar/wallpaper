@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../providers/wallpaper_provider.dart';
 import 'home_screen.dart';
+import 'package:wallpaper/l10n/app_localizations.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -84,8 +85,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
+      value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor: Colors.transparent,
@@ -217,7 +219,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                         child: Column(
                           children: [
                             Text(
-                              'AMOZEA',
+                              l10n.appTitle.toUpperCase(),
                               style: TextStyle(
                                 fontSize: 48,
                                 fontWeight: FontWeight.w900, // Extra Bold
@@ -235,7 +237,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'UNLEASH YOUR DISPLAY',
+                              l10n.unleashDisplay,
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w400,
@@ -287,7 +289,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                     ),
                                     const SizedBox(width: 14),
                                     Text(
-                                      'PREPARING EXPERIENCE',
+                                      l10n.preparingExperience,
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.5),
                                         fontSize: 9,

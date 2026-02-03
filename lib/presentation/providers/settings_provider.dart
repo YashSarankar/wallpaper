@@ -17,6 +17,7 @@ class SettingsState {
   final bool autoChangeEnabled;
   final int autoChangeFrequency; // Seconds
   final int lastAutoChange; // Timestamp
+  final String language;
 
   SettingsState({
     required this.gridColumns,
@@ -25,6 +26,7 @@ class SettingsState {
     required this.autoChangeEnabled,
     required this.autoChangeFrequency,
     required this.lastAutoChange,
+    required this.language,
   });
 
   SettingsState copyWith({
@@ -34,6 +36,7 @@ class SettingsState {
     bool? autoChangeEnabled,
     int? autoChangeFrequency,
     int? lastAutoChange,
+    String? language,
   }) {
     return SettingsState(
       gridColumns: gridColumns ?? this.gridColumns,
@@ -42,6 +45,7 @@ class SettingsState {
       autoChangeEnabled: autoChangeEnabled ?? this.autoChangeEnabled,
       autoChangeFrequency: autoChangeFrequency ?? this.autoChangeFrequency,
       lastAutoChange: lastAutoChange ?? this.lastAutoChange,
+      language: language ?? this.language,
     );
   }
 }
@@ -56,6 +60,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
           autoChangeEnabled: false,
           autoChangeFrequency: 86400, // Default 24h in seconds
           lastAutoChange: 0,
+          language: 'English',
         ),
       ) {
     _loadSettings();
@@ -83,6 +88,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       autoChangeEnabled: prefs.getBool('autoChangeEnabled') ?? false,
       autoChangeFrequency: freq,
       lastAutoChange: prefs.getInt('lastAutoChange') ?? 0,
+      language: prefs.getString('language') ?? 'English',
     );
 
     if (state.autoChangeEnabled) {
@@ -139,5 +145,11 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('downloadQuality', quality);
     state = state.copyWith(downloadQuality: quality);
+  }
+
+  Future<void> setLanguage(String language) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language', language);
+    state = state.copyWith(language: language);
   }
 }

@@ -1,14 +1,17 @@
-# Flutter Wallpaper App
+# Amozea - AMOLED Wallpaper App
 
-A production-ready Flutter wallpaper application for Android that does NOT rely on any third-party wallpaper APIs.
+A production-ready Flutter wallpaper application with backend API integration and multi-language support.
 
 ## Features
-- **Offline-First**: Caches wallpapers and data locally.
-- **Material 3 Design**: Modern UI with Dark/Light mode support.
-- **Local & Remote**: Load wallpapers from a remote JSON or fallback to local assets.
-- **Favorites**: Save your favorite wallpapers.
-- **Set Wallpaper**: Home Screen, Lock Screen, or Both.
-- **Download & Share**: Save to device or share with friends.
+- **Backend API Integration**: Fetches wallpapers from a Node.js/Express backend
+- **Multi-Language Support**: English, Spanish, French, Hindi, and Japanese
+- **Offline-First**: Caches wallpapers and data locally
+- **Material 3 Design**: Modern UI with Dark/Light mode support
+- **Favorites**: Save your favorite wallpapers
+- **Auto Wallpaper Changer**: Automatically cycle through favorites
+- **Set Wallpaper**: Home Screen, Lock Screen, or Both
+- **Download & Share**: Save to device or share with friends
+- **Personal Photos**: Add your own photos to the rotation
 
 ## Setup & Installation
 
@@ -17,45 +20,33 @@ A production-ready Flutter wallpaper application for Android that does NOT rely 
    ```bash
    flutter pub get
    ```
-3. **Run the app**:
+3. **Generate localization files**:
+   ```bash
+   flutter gen-l10n
+   ```
+4. **Run the app**:
    ```bash
    flutter run
    ```
 
 ## Configuration
 
-### Adding New Wallpapers
-The app uses a JSON structure to manage wallpapers. You can host this JSON file on GitHub Pages, Firebase, or use a local file.
-
-**JSON Structure:**
-```json
-{
-  "categories": [
-    {
-      "name": "Nature",
-      "wallpapers": [
-        {
-          "id": "1",
-          "type": "static",
-          "url": "https://example.com/nature1.jpg"
-        }
-      ]
-    }
-  ]
-}
-```
-
-To update the source URL, edit `lib/core/constants/app_constants.dart`:
+### Backend API
+The app connects to a backend API for wallpapers. Update the URL in `lib/core/constants/app_constants.dart`:
 ```dart
-static const String remoteWallpaperJsonUrl = 'YOUR_JSON_URL_HERE';
+static const String remoteWallpaperJsonUrl = 'YOUR_API_URL_HERE';
 ```
 
-### Adding Categories
-Simply add a new object to the `categories` array in your JSON file. The app handles categories dynamically.
+### Adding Translations
+Translation files are located in `lib/l10n/`. To add a new language:
+1. Create a new `.arb` file (e.g., `app_de.arb` for German)
+2. Copy the structure from `app_en.arb`
+3. Translate all values
+4. Run `flutter gen-l10n`
 
 ## Build for Release (Android)
 
-1. Update version in `pubspec.yaml`.
+1. Update version in `pubspec.yaml`
 2. Run build command:
    ```bash
    flutter build apk --release
@@ -67,7 +58,12 @@ Simply add a new object to the `categories` array in your JSON file. The app han
 - `lib/data`: Data layer (API, Local Storage, Models)
 - `lib/domain`: Domain layer (Repositories, Interfaces)
 - `lib/presentation`: UI layer (Screens, Widgets, Providers)
-- `lib/core`: Constants and Utilities
+- `lib/core`: Constants, Extensions, and Utilities
+- `lib/l10n`: Localization files
+- `backend`: Node.js/Express backend API
+
+## Backend Setup
+See `backend/README.md` for backend setup instructions.
 
 ## License
 MIT

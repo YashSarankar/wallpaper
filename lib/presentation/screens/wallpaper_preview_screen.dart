@@ -13,6 +13,8 @@ import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
 import '../providers/wallpaper_provider.dart';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+
 class WallpaperPreviewScreen extends ConsumerStatefulWidget {
   final WallpaperModel? wallpaper;
   final File? localFile;
@@ -104,6 +106,7 @@ class _WallpaperPreviewScreenState
   }
 
   Future<void> _setWallpaper(int location) async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() => _isSetting = true);
     try {
       File? file;
@@ -121,14 +124,14 @@ class _WallpaperPreviewScreenState
           });
 
           if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Wallpaper Set: $result')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('${l10n.wallpaperSet}: $result')),
+            );
           }
         } on PlatformException catch (e) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to set wallpaper: ${e.message}')),
+              SnackBar(content: Text('${l10n.failedToSet}: ${e.message}')),
             );
           }
         }
@@ -146,6 +149,7 @@ class _WallpaperPreviewScreenState
 
   Future<void> _downloadWallpaper() async {
     if (widget.localFile != null) return;
+    final l10n = AppLocalizations.of(context)!;
 
     debugPrint('Starting download process for: ${widget.wallpaper!.url}');
     if (Platform.isAndroid) {
@@ -184,9 +188,9 @@ class _WallpaperPreviewScreenState
         );
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Download complete! Opening...')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.downloadComplete)));
 
           await Future.delayed(const Duration(milliseconds: 800));
 
@@ -222,6 +226,7 @@ class _WallpaperPreviewScreenState
 
   Future<void> _shareWallpaper() async {
     if (widget.localFile != null) return; // Already on device
+    final l10n = AppLocalizations.of(context)!;
     final file = await _downloadFile(widget.wallpaper!.url);
     if (file != null) {
       final newPath =
@@ -230,11 +235,12 @@ class _WallpaperPreviewScreenState
 
       await Share.shareXFiles([
         XFile(pngFile.path, mimeType: 'image/png'),
-      ], text: 'Check out this wallpaper!');
+      ], text: l10n.checkOutWallpaper);
     }
   }
 
   void _showSetWallpaperOptions() {
+    final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -257,11 +263,11 @@ class _WallpaperPreviewScreenState
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
                 child: Text(
-                  'Set Wallpaper',
-                  style: TextStyle(
+                  l10n.setWallpaper,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -270,9 +276,9 @@ class _WallpaperPreviewScreenState
               ),
               ListTile(
                 leading: const Icon(CupertinoIcons.home, color: Colors.white),
-                title: const Text(
-                  'Home Screen',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  l10n.homeScreen,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -281,9 +287,9 @@ class _WallpaperPreviewScreenState
               ),
               ListTile(
                 leading: const Icon(CupertinoIcons.lock, color: Colors.white),
-                title: const Text(
-                  'Lock Screen',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  l10n.lockScreen,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -295,9 +301,9 @@ class _WallpaperPreviewScreenState
                   CupertinoIcons.device_phone_portrait,
                   color: Colors.white,
                 ),
-                title: const Text(
-                  'Both Screens',
-                  style: TextStyle(color: Colors.white),
+                title: Text(
+                  l10n.bothScreens,
+                  style: const TextStyle(color: Colors.white),
                 ),
                 onTap: () {
                   Navigator.pop(context);
@@ -316,6 +322,7 @@ class _WallpaperPreviewScreenState
   Widget build(BuildContext context) {
     final isLocal = widget.localFile != null;
     final favorites = ref.watch(favoritesProvider);
+    final l10n = AppLocalizations.of(context)!;
     final isFav = isLocal
         ? favorites.any(
             (w) => w.id == 'local_${widget.localFile!.path.hashCode}',
@@ -479,7 +486,7 @@ class _WallpaperPreviewScreenState
                             isLoading: _progress != null,
                           ),
                         if (!isLocal) const SizedBox(width: 4),
-                        _buildSetAction(),
+                        _buildSetAction(l10n),
                         if (!isLocal) const SizedBox(width: 4),
                         _buildActionIcon(
                           icon: isFav
@@ -529,7 +536,7 @@ class _WallpaperPreviewScreenState
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'DOWNLOADING ${(_progress! * 100).toInt()}%',
+                    '${l10n.downloading} ${(_progress! * 100).toInt()}%',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -603,7 +610,7 @@ class _WallpaperPreviewScreenState
     );
   }
 
-  Widget _buildSetAction() {
+  Widget _buildSetAction(AppLocalizations l10n) {
     return GestureDetector(
       onTap: _isSetting ? null : _showSetWallpaperOptions,
       child: Container(
@@ -630,9 +637,9 @@ class _WallpaperPreviewScreenState
                     color: Colors.black,
                   ),
                 )
-              : const Text(
-                  'APPLY',
-                  style: TextStyle(
+              : Text(
+                  l10n.apply,
+                  style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w900,
                     fontSize: 14,

@@ -7,6 +7,8 @@ import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/wallpaper_card.dart';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+
 final homeSubTabProvider = StateProvider<int>((ref) => 0);
 
 class HomeTab extends ConsumerWidget {
@@ -21,6 +23,7 @@ class HomeTab extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
     final wallpapersAsync = ref.watch(wallpapersProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     final displayedWallpapers = selectedSubTab == 0
         ? latestWallpapers
@@ -77,10 +80,20 @@ class HomeTab extends ConsumerWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: _buildSubNavItem(ref, 'Latest', 0, isDarkMode),
+                        child: _buildSubNavItem(
+                          ref,
+                          l10n.latest,
+                          0,
+                          isDarkMode,
+                        ),
                       ),
                       Expanded(
-                        child: _buildSubNavItem(ref, 'Random', 1, isDarkMode),
+                        child: _buildSubNavItem(
+                          ref,
+                          l10n.random,
+                          1,
+                          isDarkMode,
+                        ),
                       ),
                     ],
                   ),
@@ -93,8 +106,8 @@ class HomeTab extends ConsumerWidget {
         wallpapersAsync.when(
           data: (categories) {
             if (displayedWallpapers.isEmpty) {
-              return const SliverFillRemaining(
-                child: Center(child: Text('No wallpapers found')),
+              return SliverFillRemaining(
+                child: Center(child: Text(l10n.noWallpapersFound)),
               );
             }
             return SliverPadding(
@@ -125,7 +138,7 @@ class HomeTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'LOOKS LIKE THE SERVER IS SLEEPING',
+                    l10n.serverSleeping,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: color.withOpacity(0.5),
@@ -140,7 +153,7 @@ class HomeTab extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     borderRadius: BorderRadius.circular(100),
                     child: Text(
-                      'WAKE UP',
+                      l10n.wakeUp,
                       style: TextStyle(
                         color: isDarkMode ? Colors.black : Colors.white,
                         fontWeight: FontWeight.w900,

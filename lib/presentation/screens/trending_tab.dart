@@ -6,6 +6,8 @@ import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import '../widgets/wallpaper_card.dart';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+
 class TrendingTab extends ConsumerWidget {
   const TrendingTab({super.key});
 
@@ -14,6 +16,7 @@ class TrendingTab extends ConsumerWidget {
     final trendingWallpapers = ref.watch(trendingWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -33,7 +36,7 @@ class TrendingTab extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No trending wallpapers yet',
+                    l10n.noTrending,
                     style: TextStyle(
                       color: isDarkMode ? Colors.white60 : Colors.black54,
                       fontSize: 16,

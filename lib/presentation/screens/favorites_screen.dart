@@ -5,6 +5,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/wallpaper_provider.dart';
 import '../widgets/wallpaper_card.dart';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+
 class FavoritesScreen extends ConsumerWidget {
   const FavoritesScreen({super.key});
 
@@ -12,6 +14,7 @@ class FavoritesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final favorites = ref.watch(favoritesProvider);
     final isDarkMode = ref.watch(themeProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
@@ -28,7 +31,7 @@ class FavoritesScreen extends ConsumerWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          'Favorites',
+          l10n.favorites,
           style: TextStyle(
             color: isDarkMode ? Colors.white : Colors.black,
             fontWeight: FontWeight.w700,
@@ -49,7 +52,7 @@ class FavoritesScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No favorites yet',
+                    l10n.noFavorites,
                     style: TextStyle(
                       color: isDarkMode ? Colors.white60 : Colors.black54,
                       fontSize: 16,

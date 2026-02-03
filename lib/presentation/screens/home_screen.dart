@@ -15,6 +15,8 @@ import 'trending_tab.dart';
 import 'category_tab.dart';
 import 'wallpaper_preview_screen.dart';
 
+import 'package:wallpaper/l10n/app_localizations.dart';
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -30,8 +32,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     const TrendingTab(),
     const CategoryTab(),
   ];
-
-  final List<String> _titles = ['Amozea', 'Trending', 'Categories'];
 
   Future<void> _pickImageFromGallery() async {
     final picker = ImagePicker();
@@ -56,6 +56,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isDarkMode = ref.watch(themeProvider);
     final favorites = ref.watch(favoritesProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
+    final l10n = AppLocalizations.of(context)!;
+
+    final List<String> titles = [l10n.appTitle, l10n.trending, l10n.categories];
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
@@ -98,8 +101,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       children: [
                         Text(
                           _currentIndex == 0
-                              ? 'Amozea'
-                              : _titles[_currentIndex],
+                              ? l10n.appTitle
+                              : titles[_currentIndex],
                           style: TextStyle(
                             color: color,
                             fontWeight: FontWeight.w800,
@@ -178,19 +181,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           0,
                           CupertinoIcons.house_fill,
                           CupertinoIcons.house,
-                          'Home',
+                          l10n.home,
                         ),
                         _buildNavItem(
                           1,
                           CupertinoIcons.flame_fill,
                           CupertinoIcons.flame,
-                          'Trending',
+                          l10n.trending,
                         ),
                         _buildNavItem(
                           2,
                           CupertinoIcons.square_grid_2x2_fill,
                           CupertinoIcons.square_grid_2x2,
-                          'Categories',
+                          l10n.categories,
                         ),
                       ],
                     ),
