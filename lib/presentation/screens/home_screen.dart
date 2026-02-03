@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart'; // Keep this one for SliverMasonryGrid.count
 
@@ -79,7 +80,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           icon: Icon(
-                            Icons.favorite_outline_rounded,
+                            CupertinoIcons.heart,
                             color: isDarkMode ? Colors.white : Colors.black,
                             size: 24,
                           ),
@@ -97,7 +98,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           icon: Icon(
-                            Icons.settings_outlined,
+                            CupertinoIcons.settings,
                             color: isDarkMode ? Colors.white : Colors.black,
                             size: 22,
                           ),
@@ -180,7 +181,7 @@ class _HomeContentState extends ConsumerState<HomeContent> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              Icons.image_not_supported_outlined,
+                              CupertinoIcons.photo,
                               size: 64,
                               color: isDarkMode
                                   ? Colors.white24
@@ -226,7 +227,11 @@ class _HomeContentState extends ConsumerState<HomeContent> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 48, color: Colors.grey),
+              const Icon(
+                CupertinoIcons.exclamationmark_circle,
+                size: 48,
+                color: Colors.grey,
+              ),
               const SizedBox(height: 16),
               Text(
                 'Something went wrong',

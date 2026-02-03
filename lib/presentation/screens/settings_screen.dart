@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/wallpaper_provider.dart';
 
@@ -17,7 +18,7 @@ class SettingsScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            CupertinoIcons.back,
             color: isDarkMode ? Colors.white : Colors.black,
             size: 20,
           ),
@@ -41,8 +42,8 @@ class SettingsScreen extends ConsumerWidget {
           _buildSettingsTile(
             context,
             icon: isDarkMode
-                ? Icons.dark_mode_rounded
-                : Icons.light_mode_rounded,
+                ? CupertinoIcons.moon_fill
+                : CupertinoIcons.sun_max_fill,
             title: 'Dark Mode',
             trailing: Switch.adaptive(
               value: isDarkMode,
@@ -58,7 +59,7 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
-            icon: Icons.info_outline_rounded,
+            icon: CupertinoIcons.info,
             title: 'Version',
             trailing: Text(
               '1.0.0',

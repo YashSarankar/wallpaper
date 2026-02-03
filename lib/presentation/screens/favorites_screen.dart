@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../providers/wallpaper_provider.dart';
@@ -20,7 +21,7 @@ class FavoritesScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            CupertinoIcons.back,
             color: isDarkMode ? Colors.white : Colors.black,
             size: 20,
           ),
@@ -42,7 +43,7 @@ class FavoritesScreen extends ConsumerWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.favorite_border_rounded,
+                    CupertinoIcons.heart,
                     size: 64,
                     color: isDarkMode ? Colors.white24 : Colors.black12,
                   ),

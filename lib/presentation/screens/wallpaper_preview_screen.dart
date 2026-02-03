@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -251,7 +252,7 @@ class _WallpaperPreviewScreenState
                 ),
               ),
               ListTile(
-                leading: const Icon(Icons.home_outlined, color: Colors.white),
+                leading: const Icon(CupertinoIcons.home, color: Colors.white),
                 title: const Text(
                   'Home Screen',
                   style: TextStyle(color: Colors.white),
@@ -262,7 +263,7 @@ class _WallpaperPreviewScreenState
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.lock_outline, color: Colors.white),
+                leading: const Icon(CupertinoIcons.lock, color: Colors.white),
                 title: const Text(
                   'Lock Screen',
                   style: TextStyle(color: Colors.white),
@@ -273,7 +274,10 @@ class _WallpaperPreviewScreenState
                 },
               ),
               ListTile(
-                leading: const Icon(Icons.phonelink_setup, color: Colors.white),
+                leading: const Icon(
+                  CupertinoIcons.device_phone_portrait,
+                  color: Colors.white,
+                ),
                 title: const Text(
                   'Both Screens',
                   style: TextStyle(color: Colors.white),
@@ -316,7 +320,10 @@ class _WallpaperPreviewScreenState
                     child: CircularProgressIndicator(color: Colors.white),
                   ),
                   errorWidget: const Center(
-                    child: Icon(Icons.error, color: Colors.white),
+                    child: Icon(
+                      CupertinoIcons.exclamationmark_circle,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -390,13 +397,16 @@ class _WallpaperPreviewScreenState
                   children: [
                     IconButton(
                       icon: const Icon(
-                        Icons.arrow_back_ios_new,
+                        CupertinoIcons.back,
                         color: Colors.white,
                       ),
                       onPressed: () => Navigator.pop(context),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.ios_share, color: Colors.white),
+                      icon: const Icon(
+                        CupertinoIcons.share,
+                        color: Colors.white,
+                      ),
                       onPressed: _shareWallpaper,
                     ),
                   ],
@@ -426,7 +436,7 @@ class _WallpaperPreviewScreenState
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
                         _buildIconButton(
-                          icon: Icons.file_download_outlined,
+                          icon: CupertinoIcons.cloud_download,
                           label: 'Download',
                           onTap: _progress != null ? null : _downloadWallpaper,
                           isLoading: _progress != null,
@@ -434,8 +444,8 @@ class _WallpaperPreviewScreenState
                         _buildSetButton(),
                         _buildIconButton(
                           icon: isFav
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
+                              ? CupertinoIcons.heart_fill
+                              : CupertinoIcons.heart,
                           label: 'Favorite',
                           color: isFav ? Colors.redAccent : Colors.white,
                           onTap: () => ref
@@ -444,8 +454,8 @@ class _WallpaperPreviewScreenState
                         ),
                         _buildIconButton(
                           icon: _showPreviewUI
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
+                              ? CupertinoIcons.eye_slash
+                              : CupertinoIcons.eye,
                           label: 'Preview',
                           onTap: () =>
                               setState(() => _showPreviewUI = !_showPreviewUI),

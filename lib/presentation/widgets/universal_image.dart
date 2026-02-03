@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class UniversalImage extends StatelessWidget {
@@ -68,11 +69,7 @@ class UniversalImage extends StatelessWidget {
     return Container(
       color: Colors.grey[100],
       child: const Center(
-        child: Icon(
-          Icons.image_not_supported_outlined,
-          color: Colors.black12,
-          size: 32,
-        ),
+        child: Icon(CupertinoIcons.photo, color: Colors.black12, size: 32),
       ),
     );
   }

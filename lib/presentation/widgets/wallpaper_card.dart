@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/wallpaper_model.dart';
 import '../providers/wallpaper_provider.dart';
@@ -76,8 +77,8 @@ class WallpaperCard extends ConsumerWidget {
                         ),
                         child: Icon(
                           isFav
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_outline_rounded,
+                              ? CupertinoIcons.heart_fill
+                              : CupertinoIcons.heart,
                           color: isFav ? Colors.redAccent : Colors.white,
                           size: 20,
                         ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 
 class LoadingWidget extends StatelessWidget {
   const LoadingWidget({super.key});
@@ -22,7 +23,7 @@ class ErrorDisplayWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
-            Icons.error_outline,
+            CupertinoIcons.exclamationmark_circle,
             size: 48,
             color: Theme.of(context).colorScheme.error,
           ),
