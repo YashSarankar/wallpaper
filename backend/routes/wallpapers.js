@@ -98,4 +98,42 @@ router.delete('/:id', auth, async (req, res) => {
     }
 });
 
+// @route   POST api/wallpapers/bulk-delete
+// @access  Private
+router.post('/bulk-delete', auth, async (req, res) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ msg: 'No IDs provided' });
+        }
+
+        const wallpapers = await Wallpaper.find({ _id: { $in: ids } });
+
+        // Cleanup GCS files for each wallpaper
+        for (const wallpaper of wallpapers) {
+            if (wallpaper.imageUrl && wallpaper.imageUrl.low) {
+                try {
+                    const lowPath = wallpaper.imageUrl.low.split('.com/')[1].split('/').slice(1).join('/');
+                    const midPath = lowPath.replace('/low/', '/mid/');
+                    const originalPath = lowPath.replace('/low/', '/original/');
+
+                    await Promise.all([
+                        bucket.file(lowPath).delete().catch(() => { }),
+                        bucket.file(midPath).delete().catch(() => { }),
+                        bucket.file(originalPath).delete().catch(() => { }),
+                    ]);
+                } catch (e) {
+                    console.error('GCS Cleanup Error (Bulk):', e.message);
+                }
+            }
+        }
+
+        await Wallpaper.deleteMany({ _id: { $in: ids } });
+        res.json({ msg: `${ids.length} wallpapers removed` });
+    } catch (err) {
+        console.error('Bulk Delete Error:', err);
+        res.status(500).send('Server Error');
+    }
+});
+
 module.exports = router;

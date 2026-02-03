@@ -135,6 +135,8 @@ const Dashboard = ({ onLogout }) => {
     const [filterCategory, setFilterCategory] = useState('All');
     const [uploadProgress, setUploadProgress] = useState(0);
     const [dragActive, setDragActive] = useState(false);
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [isBulkDeleting, setIsBulkDeleting] = useState(false);
 
     // Form State
     const [title, setTitle] = useState('');
@@ -175,6 +177,7 @@ const Dashboard = ({ onLogout }) => {
             setLoading(true);
             const res = await axios.get(API_BASE_URL);
             setWallpapers(res.data);
+            setSelectedIds([]); // Clear selection on refresh
         } catch (err) {
             console.error('Failed to fetch:', err);
         } finally {
@@ -208,10 +211,25 @@ const Dashboard = ({ onLogout }) => {
         }
     };
 
-    const handleFile = (file) => {
-        if (file && file.type.startsWith('image/')) {
-            setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file));
+    const toggleSelection = (id) => {
+        setSelectedIds(prev =>
+            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkDelete = async () => {
+        if (!selectedIds.length) return;
+        if (!window.confirm(`Delete ${selectedIds.length} wallpapers?`)) return;
+
+        setIsBulkDeleting(true);
+        try {
+            await axios.post(`${API_BASE_URL}/bulk-delete`, { ids: selectedIds });
+            setMessage({ type: 'success', text: `${selectedIds.length} wallpapers deleted` });
+            fetchWallpapers();
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Bulk delete failed' });
+        } finally {
+            setIsBulkDeleting(false);
         }
     };
 
@@ -379,6 +397,16 @@ const Dashboard = ({ onLogout }) => {
                                     <ImageIcon size={20} className="text-purple-400" />
                                     Live Gallery
                                 </h2>
+                                {selectedIds.length > 0 && (
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        disabled={isBulkDeleting}
+                                        className="bg-red-500/20 text-red-100 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/80 transition-all"
+                                    >
+                                        {isBulkDeleting ? <RefreshCw className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                                        Delete {selectedIds.length} Items
+                                    </button>
+                                )}
                             </div>
                             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                                 <select
@@ -415,22 +443,34 @@ const Dashboard = ({ onLogout }) => {
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         key={wp._id}
-                                        className="group glass rounded-xl overflow-hidden aspect-square relative"
+                                        onClick={() => toggleSelection(wp._id)}
+                                        className={`group glass rounded-xl overflow-hidden aspect-square relative cursor-pointer transition-all duration-300 ${selectedIds.includes(wp._id) ? 'ring-2 ring-indigo-500 ring-offset-4 ring-offset-[#0c0c0e] scale-[0.9]' : ''}`}
                                     >
                                         <img
                                             src={wp.imageUrl.low || wp.imageUrl.original}
                                             alt=""
-                                            className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500"
+                                            className={`w-full h-full object-cover transition-all duration-500 ${selectedIds.includes(wp._id) ? 'opacity-100 scale-110' : 'opacity-60 group-hover:opacity-100'}`}
                                         />
+
+                                        {/* Selection Indicator */}
+                                        {selectedIds.includes(wp._id) && (
+                                            <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-lg z-10">
+                                                <CheckCircle2 size={16} />
+                                            </div>
+                                        )}
+
                                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                                             <p className="text-xs font-bold truncate">{wp.title}</p>
                                             <p className="text-[10px] text-white/40 uppercase tracking-widest">{wp.category}</p>
                                         </div>
                                         {/* Actions on hover */}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                            {/* Delete button */}
+                                            {/* Single Delete button (stop propagation to avoid selection toggle) */}
                                             <button
-                                                onClick={() => handleDelete(wp._id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(wp._id);
+                                                }}
                                                 className="bg-red-500/20 p-3 rounded-full hover:bg-red-500/80 transition-all text-red-100"
                                             >
                                                 <Trash2 size={18} />
