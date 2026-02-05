@@ -15,5 +15,5 @@ class AppConstants {
 
   // Remote Config
   static const String remoteWallpaperJsonUrl =
-      'https://wallpaper-api-i7tm.onrender.com/api/wallpapers';
+      'https://wallpaper-backend-917312759089.europe-west1.run.app/api/wallpapers';
 }
