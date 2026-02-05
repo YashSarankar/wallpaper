@@ -9,15 +9,21 @@ import android.os.Bundle
 import android.os.StrictMode
 import android.widget.Toast
 import androidx.annotation.NonNull
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.FileProvider
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 import java.io.IOException
 
-class MainActivity: FlutterActivity() {
+class MainActivity: FlutterFragmentActivity() {
     private val CHANNEL = "com.amozea.wallpapers/wallpaper"
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
+        super.onCreate(savedInstanceState)
+    }
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -47,7 +53,7 @@ class MainActivity: FlutterActivity() {
     private fun setWallpaper(path: String, location: Int, result: MethodChannel.Result) {
         Thread {
             try {
-                val wallpaperManager = WallpaperManager.getInstance(context)
+                val wallpaperManager = WallpaperManager.getInstance(this@MainActivity)
                 val bitmap = BitmapFactory.decodeFile(path)
 
                 if (bitmap == null) {
@@ -70,7 +76,7 @@ class MainActivity: FlutterActivity() {
                 }
 
                 runOnUiThread {
-                    Toast.makeText(context, "Wallpaper set successfully", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Wallpaper set successfully", Toast.LENGTH_SHORT).show()
                     result.success("Success")
                 }
             } catch (e: IOException) {
@@ -89,9 +95,9 @@ class MainActivity: FlutterActivity() {
                 return
             }
 
-            // Using context.packageName to fix potential authority mismatch
-            val authority = "${context.packageName}.fileprovider"
-            val uri = FileProvider.getUriForFile(context, authority, file)
+            // Using packageName to fix potential authority mismatch
+            val authority = "${this@MainActivity.packageName}.fileprovider"
+            val uri = FileProvider.getUriForFile(this@MainActivity, authority, file)
             
             val intent = Intent(Intent.ACTION_VIEW)
             intent.setDataAndType(uri, "image/*")

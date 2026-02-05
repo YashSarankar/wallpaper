@@ -133,6 +133,17 @@ void main() async {
   // Initialize Mobile Ads SDK
   await MobileAds.instance.initialize();
 
+  // Enable Edge-to-Edge for Android 15+ compatibility
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.transparent,
+      statusBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      statusBarIconBrightness: Brightness.dark,
+    ),
+  );
+
   runApp(const ProviderScope(child: MyApp()));
 }
 
