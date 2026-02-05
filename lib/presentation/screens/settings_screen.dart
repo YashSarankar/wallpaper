@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
+import '../../utils/ad_helper.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -12,32 +13,70 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _pickAndAddPhotos(BuildContext context, WidgetRef ref) async {
-    final picker = ImagePicker();
-    try {
-      final List<XFile> images = await picker.pickMultiImage();
-      if (images.isNotEmpty) {
-        int count = 0;
-        for (final image in images) {
-          await ref
-              .read(favoritesProvider.notifier)
-              .toggleLocalFavorite(File(image.path));
-          count++;
-        }
+    final adHelper = AdHelper();
 
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Center(child: CircularProgressIndicator()),
+    );
+
+    // Define the reward action to avoid code duplication
+    void handleReward() async {
+      final picker = ImagePicker();
+      try {
+        final List<XFile> images = await picker.pickMultiImage();
+        if (images.isNotEmpty) {
+          int count = 0;
+          for (final image in images) {
+            await ref
+                .read(favoritesProvider.notifier)
+                .toggleLocalFavorite(File(image.path));
+            count++;
+          }
+
+          if (context.mounted) {
+            final l10n = AppLocalizations.of(context)!;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.addedPhotos(count)),
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.green,
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        debugPrint('Error picking images: $e');
+      }
+    }
+
+    // Load and show ad with callbacks
+    adHelper.loadRewardedAd(
+      onLoaded: () {
         if (context.mounted) {
-          final l10n = AppLocalizations.of(context)!;
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.addedPhotos(count)),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Colors.green,
-            ),
+          Navigator.pop(context); // Dismiss loading dialog
+          adHelper.showRewardedAd(
+            onRewardEarned: handleReward,
+            onDismissed: () {
+              // Optional: handle dismissal
+            },
           );
         }
-      }
-    } catch (e) {
-      debugPrint('Error picking images: $e');
-    }
+      },
+      onFailed: () {
+        if (context.mounted) {
+          Navigator.pop(context); // Dismiss loading dialog
+          // If ad fails to load, we can choose to let the user proceed anyway
+          // relying on the fallback in showRewardedAd which calls onRewardEarned
+          adHelper.showRewardedAd(
+            onRewardEarned: handleReward,
+            onDismissed: null,
+          );
+        }
+      },
+    );
   }
 
   Future<void> _clearCache(BuildContext context) async {

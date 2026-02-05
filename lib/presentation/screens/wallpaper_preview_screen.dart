@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:async_wallpaper/async_wallpaper.dart';
 
 import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
@@ -118,15 +119,23 @@ class _WallpaperPreviewScreenState
 
       if (file != null) {
         try {
-          final result = await platform.invokeMethod('setWallpaper', {
-            'path': file.path,
-            'location': location,
-          });
+          // Map location int to AsyncWallpaper constants if needed, or pass directly if they match
+          // 1=Home, 2=Lock, 3=Both. AsyncWallpaper usually matches this.
+          // Let's use the explicit constants to be safe.
+          int wallpaperLocation = AsyncWallpaper.HOME_SCREEN;
+          if (location == 2) wallpaperLocation = AsyncWallpaper.LOCK_SCREEN;
+          if (location == 3) wallpaperLocation = AsyncWallpaper.BOTH_SCREENS;
 
+          await AsyncWallpaper.setWallpaperFromFile(
+            filePath: file.path,
+            wallpaperLocation: wallpaperLocation,
+          );
+
+          // Result is void so we assume success if no error
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('${l10n.wallpaperSet}: $result')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
           }
         } on PlatformException catch (e) {
           if (mounted) {

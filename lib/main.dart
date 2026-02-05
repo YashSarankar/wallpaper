@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:math';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,8 +17,9 @@ import 'presentation/providers/wallpaper_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 
+import 'package:async_wallpaper/async_wallpaper.dart';
+
 const String autoChangeTask = "com.amozea.wallpapers.autoChange";
-const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -28,6 +30,8 @@ void callbackDispatcher() {
 
       final prefs = await SharedPreferences.getInstance();
       final isEnabled = prefs.getBool('autoChangeEnabled') ?? false;
+
+      // Removed force inputData check as testing mode is removed
       if (!isEnabled) return true;
 
       final favorites = LocalStorageService.getFavorites();
@@ -55,7 +59,7 @@ void callbackDispatcher() {
 
             if (response.statusCode == 200) break;
           } catch (e) {
-            debugPrint('Background Download Attempt $retries failed: $e');
+            // Silently fail retries
           }
           retries++;
           await Future.delayed(const Duration(seconds: 2));
@@ -72,20 +76,24 @@ void callbackDispatcher() {
       }
 
       if (finalPath != null && await File(finalPath).exists()) {
-        await platform.invokeMethod('setWallpaper', {
-          'path': finalPath,
-          'location': 3,
-        });
+        try {
+          // Set wallpaper using async_wallpaper package
+          await AsyncWallpaper.setWallpaperFromFile(
+            filePath: finalPath,
+            wallpaperLocation: AsyncWallpaper.BOTH_SCREENS,
+          );
 
-        await prefs.setInt(
-          'lastAutoChange',
-          DateTime.now().millisecondsSinceEpoch,
-        );
+          await prefs.setInt(
+            'lastAutoChange',
+            DateTime.now().millisecondsSinceEpoch,
+          );
+        } catch (e) {
+          return false;
+        }
       }
 
       return true;
     } catch (e) {
-      debugPrint('Background Task Error: $e');
       return false;
     }
   });
@@ -96,6 +104,9 @@ void main() async {
   await LocalStorageService.init();
 
   await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+
+  // Initialize Mobile Ads SDK
+  await MobileAds.instance.initialize();
 
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -124,7 +135,7 @@ class MyApp extends ConsumerWidget {
     final settings = ref.watch(settingsProvider);
 
     return MaterialApp(
-      title: 'Amozea – AMOLED Wallpapers',
+      title: 'Amozea',
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         AppLocalizations.delegate,
