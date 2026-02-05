@@ -92,7 +92,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     );
 
     if (state.autoChangeEnabled) {
-      _scheduleTask();
+      _scheduleTask(ExistingPeriodicWorkPolicy.keep);
     }
   }
 
@@ -102,7 +102,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(autoChangeEnabled: enabled);
 
     if (enabled) {
-      _scheduleTask();
+      _scheduleTask(ExistingPeriodicWorkPolicy.replace);
     } else {
       await Workmanager().cancelByTag(autoChangeTask);
     }
@@ -114,17 +114,17 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(autoChangeFrequency: seconds);
 
     if (state.autoChangeEnabled) {
-      _scheduleTask();
+      _scheduleTask(ExistingPeriodicWorkPolicy.replace);
     }
   }
 
-  void _scheduleTask() {
+  void _scheduleTask(ExistingPeriodicWorkPolicy policy) {
     Workmanager().registerPeriodicTask(
       "1",
       autoChangeTask,
       frequency: Duration(seconds: state.autoChangeFrequency),
       tag: autoChangeTask,
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
+      existingWorkPolicy: policy,
       constraints: Constraints(networkType: NetworkType.connected),
     );
   }

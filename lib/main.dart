@@ -12,7 +12,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/services/local_storage_service.dart';
-import 'data/models/wallpaper_model.dart';
 import 'presentation/providers/wallpaper_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/screens/splash_screen.dart';
@@ -25,24 +24,38 @@ const String autoChangeTask = "com.amozea.wallpapers.autoChange";
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
+      debugPrint('--- WORKMANAGER TASK STARTED ---');
       WidgetsFlutterBinding.ensureInitialized();
+
+      // Ensure Hive is initialized and boxes are open
       await LocalStorageService.init();
 
       final prefs = await SharedPreferences.getInstance();
       final isEnabled = prefs.getBool('autoChangeEnabled') ?? false;
 
-      // Removed force inputData check as testing mode is removed
-      if (!isEnabled) return true;
+      debugPrint('Auto-change status: $isEnabled');
+
+      if (!isEnabled) {
+        debugPrint('Auto-change is disabled in settings. Skipping.');
+        return true;
+      }
 
       final favorites = LocalStorageService.getFavorites();
-      if (favorites.isEmpty) return true;
+      debugPrint('Favorites count: ${favorites.length}');
+
+      if (favorites.isEmpty) {
+        debugPrint('No favorites found. Skipping.');
+        return true;
+      }
 
       final random = Random();
       final wallpaper = favorites[random.nextInt(favorites.length)];
+      debugPrint('Selected wallpaper: ${wallpaper.id} (${wallpaper.url})');
 
       String? finalPath;
 
       if (wallpaper.url.startsWith('http')) {
+        debugPrint('Downloading image from URL...');
         http.Response? response;
         int retries = 0;
         while (retries < 3) {
@@ -55,14 +68,17 @@ void callbackDispatcher() {
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                   },
                 )
-                .timeout(const Duration(seconds: 30));
+                .timeout(const Duration(seconds: 45));
 
             if (response.statusCode == 200) break;
+            debugPrint(
+              'Download failed with status: ${response.statusCode}. Retrying...',
+            );
           } catch (e) {
-            // Silently fail retries
+            debugPrint('Download error: $e');
           }
           retries++;
-          await Future.delayed(const Duration(seconds: 2));
+          await Future.delayed(const Duration(seconds: 5));
         }
 
         if (response != null && response.statusCode == 200) {
@@ -70,14 +86,18 @@ void callbackDispatcher() {
           final file = File('${tempDir.path}/auto_wallpaper.png');
           await file.writeAsBytes(response.bodyBytes);
           finalPath = file.path;
+          debugPrint('Image saved to: $finalPath');
+        } else {
+          debugPrint('Failed to download image after retries.');
         }
       } else {
         finalPath = wallpaper.url;
+        debugPrint('Using local file path: $finalPath');
       }
 
       if (finalPath != null && await File(finalPath).exists()) {
         try {
-          // Set wallpaper using async_wallpaper package
+          debugPrint('Setting wallpaper...');
           await AsyncWallpaper.setWallpaperFromFile(
             filePath: finalPath,
             wallpaperLocation: AsyncWallpaper.BOTH_SCREENS,
@@ -87,13 +107,18 @@ void callbackDispatcher() {
             'lastAutoChange',
             DateTime.now().millisecondsSinceEpoch,
           );
+          debugPrint('--- WALLPAPER CHANGED SUCCESSFULLY ---');
         } catch (e) {
+          debugPrint('Error setting wallpaper: $e');
           return false;
         }
+      } else {
+        debugPrint('Final path is null or file does not exist.');
       }
 
       return true;
     } catch (e) {
+      debugPrint('CRITICAL TASK ERROR: $e');
       return false;
     }
   });
