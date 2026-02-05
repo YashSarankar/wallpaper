@@ -22,12 +22,13 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
 const storage = new Storage(storageOptions);
 
 const bucketName = process.env.GCS_BUCKET_NAME;
-console.log(`Targeting GCS Bucket: ${bucketName}`);
+console.log(`Targeting GCS Bucket: ${bucketName || 'NOT DEFINED'}`);
 
+let bucket = null;
 if (!bucketName) {
     console.error('CRITICAL: GCS_BUCKET_NAME is not defined!');
+} else {
+    bucket = storage.bucket(bucketName);
 }
-
-const bucket = storage.bucket(bucketName);
 
 module.exports = { storage, bucket };

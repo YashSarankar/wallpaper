@@ -1,12 +1,17 @@
+require('dotenv').config();
+console.log('--- STARTING BACKEND SERVER ---');
 const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
 
-// Connect Database
-connectDB();
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+    console.log(`--- Server started on port ${PORT} ---`);
+    // Connect Database AFTER starting server
+    connectDB();
+});
 
 // CORS Configuration - The "Security Door"
 const allowedOrigins = [
@@ -54,6 +59,3 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
-
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
