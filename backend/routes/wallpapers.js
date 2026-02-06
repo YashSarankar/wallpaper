@@ -22,7 +22,11 @@ router.get('/', async (req, res) => {
         const wallpapers = await Wallpaper.find().sort({ createdAt: -1 });
         res.json(wallpapers);
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error('FETCH WALLPAPERS ERROR:', err.message);
+        res.status(500).json({
+            msg: 'Server Error fetching wallpapers',
+            error: err.message
+        });
     }
 });
 
@@ -34,8 +38,11 @@ router.get('/category/:category', async (req, res) => {
         const wallpapers = await Wallpaper.find({ category: req.params.category }).sort({ createdAt: -1 });
         res.json(wallpapers);
     } catch (err) {
-        console.error(err);
-        res.status(500).send('Server Error');
+        console.error('FETCH BY CATEGORY ERROR:', err.message);
+        res.status(500).json({
+            msg: 'Server Error fetching category',
+            error: err.message
+        });
     }
 });
 
@@ -94,7 +101,11 @@ router.delete('/:id', auth, async (req, res) => {
         await wallpaper.deleteOne();
         res.json({ msg: 'Wallpaper removed' });
     } catch (err) {
-        res.status(500).send('Server Error');
+        console.error('DELETE WALLPAPER ERROR:', err.message);
+        res.status(500).json({
+            msg: 'Server Error deleting wallpaper',
+            error: err.message
+        });
     }
 });
 
@@ -131,8 +142,11 @@ router.post('/bulk-delete', auth, async (req, res) => {
         await Wallpaper.deleteMany({ _id: { $in: ids } });
         res.json({ msg: `${ids.length} wallpapers removed` });
     } catch (err) {
-        console.error('Bulk Delete Error:', err);
-        res.status(500).send('Server Error');
+        console.error('BULK DELETE ERROR:', err.message);
+        res.status(500).json({
+            msg: 'Server Error in bulk delete',
+            error: err.message
+        });
     }
 });
 
