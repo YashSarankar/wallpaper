@@ -7,9 +7,10 @@
 -keep class io.flutter.plugins.**  { *; }
 
 # Google Mobile Ads
--keep class com.google.android.gms.** { *; }
--keep public class com.google.android.gms.* { public *; }
--keep public class com.google.ads.** { public *; }
+-keep class com.google.android.gms.ads.** { *; }
+-keep class com.google.ads.** { *; }
+-dontwarn com.google.android.gms.internal.**
+-keep public class com.google.android.gms.** { public *; }
 
 # OkHttp & Network (R8/ProGuard fix for Conscrypt)
 -dontwarn org.conscrypt.**
