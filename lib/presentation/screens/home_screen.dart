@@ -10,6 +10,7 @@ import '../providers/wallpaper_provider.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import '../../core/constants/app_constants.dart';
+import '../../utils/ad_helper.dart';
 import 'home_tab.dart';
 import 'trending_tab.dart';
 import 'category_tab.dart';
@@ -34,21 +35,53 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ];
 
   Future<void> _pickImageFromGallery() async {
-    final picker = ImagePicker();
-    try {
-      final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-      if (image != null && mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                WallpaperPreviewScreen(localFile: File(image.path)),
-          ),
+    final adHelper = AdHelper();
+
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+    );
+
+    void handlePickImage() async {
+      final picker = ImagePicker();
+      try {
+        final XFile? image = await picker.pickImage(
+          source: ImageSource.gallery,
         );
+        if (image != null && mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  WallpaperPreviewScreen(localFile: File(image.path)),
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint('Error picking image: $e');
       }
-    } catch (e) {
-      debugPrint('Error picking image: $e');
     }
+
+    adHelper.loadRewardedAd(
+      onLoaded: () {
+        if (mounted) {
+          Navigator.pop(context); // Dismiss loading
+          adHelper.showRewardedAd(
+            onRewardEarned: handlePickImage,
+            onDismissed: () {},
+          );
+        }
+      },
+      onFailed: () {
+        if (mounted) {
+          Navigator.pop(context); // Dismiss loading
+          // Fallback to allow functionality even if ad fails
+          handlePickImage();
+        }
+      },
+    );
   }
 
   @override
