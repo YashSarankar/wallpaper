@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/ad_helper.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
@@ -346,6 +347,31 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 10),
           _buildSettingsTile(
             context,
+            icon: CupertinoIcons.shield_lefthalf_fill,
+            title:
+                'Privacy Policy', // Using literal since l10n might not have it yet
+            trailing: const Icon(
+              CupertinoIcons.chevron_right,
+              size: 16,
+              color: Colors.grey,
+            ),
+            isDarkMode: isDarkMode,
+            onTap: () async {
+              final Uri url = Uri.parse('https://sarankar.com/privacy');
+              if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Could not open Privacy Policy'),
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+          const SizedBox(height: 8),
+          _buildSettingsTile(
+            context,
             icon: CupertinoIcons.heart,
             title: l10n.rateApp,
             trailing: const Icon(
@@ -354,7 +380,18 @@ class SettingsScreen extends ConsumerWidget {
               color: Colors.grey,
             ),
             isDarkMode: isDarkMode,
-            onTap: () {}, // Implement Store link
+            onTap: () async {
+              final Uri url = Uri.parse(
+                'https://play.google.com/store/apps/details?id=com.amozea.wallpapers',
+              );
+              if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not open Play Store')),
+                  );
+                }
+              }
+            },
           ),
           const SizedBox(height: 8),
           _buildSettingsTile(
@@ -362,7 +399,7 @@ class SettingsScreen extends ConsumerWidget {
             icon: CupertinoIcons.doc_text,
             title: l10n.version,
             trailing: Text(
-              '1.1.0',
+              '1.5.1',
               style: TextStyle(
                 color: isDarkMode ? Colors.white38 : Colors.black38,
                 fontSize: 13,
