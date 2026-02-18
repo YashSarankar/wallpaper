@@ -75,7 +75,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await prefs.setInt('autoChangeFrequency', freq);
     }
 
-    const allowed = [3600, 21600, 43200, 86400, 172800, 604800];
+    const allowed = [86400, 172800, 604800];
     if (!allowed.contains(freq)) {
       freq = 86400;
       await prefs.setInt('autoChangeFrequency', freq);

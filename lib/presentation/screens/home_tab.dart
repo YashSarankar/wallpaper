@@ -26,8 +26,8 @@ class HomeTab extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     final displayedWallpapers = selectedSubTab == 0
-        ? latestWallpapers
-        : randomWallpapers;
+        ? randomWallpapers
+        : latestWallpapers;
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -82,7 +82,7 @@ class HomeTab extends ConsumerWidget {
                       Expanded(
                         child: _buildSubNavItem(
                           ref,
-                          l10n.latest,
+                          l10n.random,
                           0,
                           isDarkMode,
                         ),
@@ -90,7 +90,7 @@ class HomeTab extends ConsumerWidget {
                       Expanded(
                         child: _buildSubNavItem(
                           ref,
-                          l10n.random,
+                          l10n.latest,
                           1,
                           isDarkMode,
                         ),

@@ -10,6 +10,10 @@ class UniversalImage extends StatelessWidget {
   final double? borderRadius;
   final Widget? placeholder;
   final Widget? errorWidget;
+  final FilterQuality filterQuality;
+  final int? cacheWidth;
+  final int? cacheHeight;
+  final Alignment alignment;
 
   const UniversalImage({
     super.key,
@@ -19,6 +23,10 @@ class UniversalImage extends StatelessWidget {
     this.borderRadius,
     this.placeholder,
     this.errorWidget,
+    this.filterQuality = FilterQuality.high,
+    this.cacheWidth,
+    this.cacheHeight,
+    this.alignment = Alignment.center,
   });
 
   @override
@@ -28,6 +36,19 @@ class UniversalImage extends StatelessWidget {
       imageWidget = CachedNetworkImage(
         imageUrl: path,
         fit: fit,
+        filterQuality: filterQuality,
+        memCacheWidth: cacheWidth,
+        memCacheHeight: cacheHeight,
+        imageBuilder: (context, imageProvider) => Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: imageProvider,
+              fit: fit,
+              alignment: alignment,
+              filterQuality: filterQuality,
+            ),
+          ),
+        ),
         fadeInDuration: const Duration(milliseconds: 500),
         fadeOutDuration: const Duration(milliseconds: 300),
         placeholder: (context, url) =>
@@ -36,6 +57,9 @@ class UniversalImage extends StatelessWidget {
                 ? CachedNetworkImage(
                     imageUrl: thumbnailUrl!,
                     fit: fit,
+                    alignment: alignment,
+                    filterQuality: filterQuality,
+                    // DO NOT set memCacheWidth here to ensure it hits the home screen cache
                     placeholder: (context, url) => _buildShimmerPlaceholder(),
                   )
                 : _buildShimmerPlaceholder()),
@@ -46,6 +70,9 @@ class UniversalImage extends StatelessWidget {
       imageWidget = Image.file(
         File(path),
         fit: fit,
+        filterQuality: filterQuality,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         errorBuilder: (context, error, stackTrace) {
           return errorWidget ?? _buildErrorPlaceholder();
         },
@@ -54,6 +81,9 @@ class UniversalImage extends StatelessWidget {
       imageWidget = Image.asset(
         path,
         fit: fit,
+        filterQuality: filterQuality,
+        cacheWidth: cacheWidth,
+        cacheHeight: cacheHeight,
         errorBuilder: (context, error, stackTrace) {
           return errorWidget ?? _buildErrorPlaceholder();
         },

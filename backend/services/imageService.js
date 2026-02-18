@@ -37,9 +37,9 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
     // We will convert to JPEG for consistency
     const baseName = `${timestamp}-${cleanName}`;
 
-    // 1. Original (High Quality)
+    // 1. Original (High Quality - 100% for 4K feel)
     const originalBuffer = await sharp(fileBuffer)
-        .jpeg({ quality: 90 })
+        .jpeg({ quality: 100 })
         .toBuffer();
     const originalPath = `wallpapers/original/${baseName}.jpg`;
 

@@ -42,9 +42,13 @@ class _WallpaperPreviewScreenState
     if (widget.localFile != null) return widget.localFile!.path;
     String url = widget.wallpaper!.url;
     if (url.contains('unsplash.com')) {
-      // Remove restricted width/quality and boost it for preview
-      url = url.replaceAll(RegExp(r'&w=\d+'), '&w=2400');
-      url = url.replaceAll(RegExp(r'&q=\d+'), '&q=100');
+      // Use much higher resolution for preview/zoom (up to 5K)
+      url = url.replaceAllMapped(
+        RegExp(r'([?&])w=\d+'),
+        (m) => '${m[1]}w=5000',
+      );
+      url = url.replaceAllMapped(RegExp(r'([?&])q=\d+'), (m) => '${m[1]}q=100');
+      if (!url.contains('w=5000')) url += '&w=5000';
     }
     return url;
   }
@@ -343,17 +347,19 @@ class _WallpaperPreviewScreenState
                 child: Hero(
                   tag:
                       widget.heroTag ??
-                      (isLocal ? 'local' : widget.wallpaper!.id),
+                      (isLocal
+                          ? 'local_${widget.localFile?.path}'
+                          : widget.wallpaper!.id),
                   child: UniversalImage(
                     path: _highResUrl,
-                    thumbnailUrl: isLocal ? null : widget.wallpaper!.lowUrl,
-                    fit: BoxFit.cover,
-                    placeholder: const Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    ),
+                    thumbnailUrl: isLocal
+                        ? null
+                        : (widget.wallpaper!.midUrl ??
+                              widget.wallpaper!.lowUrl),
+                    fit: BoxFit.cover, // Fill the screen to avoid blank spaces
+                    borderRadius: 0,
+                    cacheWidth: 3840,
+                    alignment: Alignment.center,
                     errorWidget: const Center(
                       child: Icon(
                         CupertinoIcons.exclamationmark_circle,

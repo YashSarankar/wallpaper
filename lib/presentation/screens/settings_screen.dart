@@ -267,9 +267,6 @@ class SettingsScreen extends ConsumerWidget {
                 child: DropdownButton<int>(
                   value:
                       [
-                        3600,
-                        21600,
-                        43200,
                         86400,
                         172800,
                         604800,
@@ -281,19 +278,15 @@ class SettingsScreen extends ConsumerWidget {
                     color: isDarkMode ? Colors.white : Colors.black,
                     fontSize: 13,
                   ),
-                  items: [3600, 21600, 43200, 86400, 172800, 604800].map((
-                    int value,
-                  ) {
+                  items: [86400, 172800, 604800].map((int value) {
                     String label;
-                    if (value < 86400) {
-                      label = '${value ~/ 3600} Hours';
+                    if (value == 86400) {
+                      label = 'Daily';
                     } else if (value < 604800) {
                       label = '${value ~/ 86400} Days';
                     } else {
                       label = '1 Week';
                     }
-
-                    if (value == 86400) label = 'Daily';
 
                     return DropdownMenuItem<int>(
                       value: value,
