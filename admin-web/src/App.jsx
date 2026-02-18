@@ -145,6 +145,11 @@ const Dashboard = ({ onLogout }) => {
         'Text', 'Game'
     ];
 
+    const categoryCounts = wallpapers.reduce((acc, wp) => {
+        acc[wp.category] = (acc[wp.category] || 0) + 1;
+        return acc;
+    }, {});
+
     const handleFile = (file) => {
         if (!file) return;
         if (!file.type.startsWith('image/')) {
@@ -329,7 +334,11 @@ const Dashboard = ({ onLogout }) => {
                             <div>
                                 <label className="text-xs uppercase font-bold text-white/40 block mb-2 px-1">Category</label>
                                 <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    {categories.map(cat => (
+                                        <option key={cat} value={cat}>
+                                            {cat} ({categoryCounts[cat] || 0})
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
 
@@ -371,8 +380,12 @@ const Dashboard = ({ onLogout }) => {
 
                             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
                                 <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="text-xs font-bold py-2 w-full sm:w-40 border-none bg-indigo-500/10 text-indigo-300 rounded-xl cursor-pointer hover:bg-indigo-500/20 transition-all">
-                                    <option value="All">All Categories</option>
-                                    {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                    <option value="All">All Categories ({wallpapers.length})</option>
+                                    {categories.map(cat => (
+                                        <option key={cat} value={cat}>
+                                            {cat} ({categoryCounts[cat] || 0})
+                                        </option>
+                                    ))}
                                 </select>
                                 <div className="relative w-full sm:w-64">
                                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
