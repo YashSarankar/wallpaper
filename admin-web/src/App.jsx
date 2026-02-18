@@ -5,7 +5,6 @@ import {
     Image as ImageIcon,
     Trash2,
     LayoutDashboard,
-    LogOut,
     Plus,
     RefreshCw,
     Search,
@@ -14,13 +13,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Smart URL management
 // Robust URL management
 const getBaseUrl = () => {
-    // Falls back to local if VITE_API_URL is missing
     let url = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-    // Remove trailing slashes and the '/wallpapers' suffix if present
     url = url.replace(/\/$/, '');
     if (url.endsWith('/wallpapers')) {
         url = url.replace('/wallpapers', '');
@@ -30,104 +25,8 @@ const getBaseUrl = () => {
 
 const BASE_API = getBaseUrl();
 const API_BASE_URL = `${BASE_API}/wallpapers`;
-const AUTH_URL = `${BASE_API}/auth/login`;
 
-// Axios interceptor to add the token to every request
-axios.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('adminAuthToken');
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
-
-const Login = ({ onLogin }) => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState('');
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError('');
-
-        try {
-            const res = await axios.post(AUTH_URL, { username, password });
-            onLogin(res.data.token);
-        } catch (err) {
-            console.error('Login Error:', err);
-            const serverMessage = err.response?.data?.msg || err.response?.data?.error;
-            setError(serverMessage || `Connection Error: ${err.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    return (
-        <div className="min-h-screen flex items-center justify-center p-4">
-            <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="glass p-8 rounded-3xl w-full max-w-md space-y-8"
-            >
-                <div className="text-center">
-                    <div className="bg-indigo-500/20 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                        <LayoutDashboard size={32} className="text-indigo-400" />
-                    </div>
-                    <h1 className="text-2xl font-bold gradient-text">Amozea Admin</h1>
-                    <p className="text-white/40 text-sm mt-2">Enter credentials to manage Amozea</p>
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div>
-                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Username</label>
-                        <input
-                            type="text"
-                            className="w-full"
-                            placeholder="admin"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
-                            autoFocus
-                        />
-                    </div>
-
-                    <div>
-                        <label className="text-xs font-bold text-white/40 uppercase px-1 mb-2 block">Password</label>
-                        <input
-                            type="password"
-                            className="w-full"
-                            placeholder="••••••••"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                        />
-                    </div>
-
-                    {error && (
-                        <p className="text-red-400 text-xs text-center border border-red-400/20 bg-red-400/5 py-2 rounded-lg font-bold uppercase tracking-wider">
-                            {error}
-                        </p>
-                    )}
-
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="primary-btn w-full py-4 text-sm uppercase tracking-widest font-bold flex items-center justify-center gap-2"
-                    >
-                        {isLoading ? <RefreshCw className="animate-spin" size={18} /> : 'Authenticate'}
-                    </button>
-                </form>
-            </motion.div>
-        </div>
-    );
-};
-
-const Dashboard = ({ onLogout }) => {
+const Dashboard = () => {
     const [wallpapers, setWallpapers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -146,27 +45,29 @@ const Dashboard = ({ onLogout }) => {
     const [message, setMessage] = useState(null);
 
     const categories = [
-        'Amoled',
-        'Nature',
-        'Stock',
-        'Black',
-        'Cars & Bike',
-        'Model',
-        'Fitness',
-        'God',
-        'Festival',
-        'Abstract',
-        'Anime',
-        'Romantic Vibe',
-        'Fantasy',
-        'Top Wallpaper',
-        'Superhero',
-        'Travel',
-        'Movies',
-        'Food',
-        'Text',
-        'Game'
+        'Amoled', 'Nature', 'Stock', 'Black', 'Cars & Bike', 'Model',
+        'Fitness', 'God', 'Festival', 'Abstract', 'Anime', 'Romantic Vibe',
+        'Fantasy', 'Top Wallpaper', 'Superhero', 'Travel', 'Movies', 'Food',
+        'Text', 'Game'
     ];
+
+    const handleFile = (file) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            setMessage({ type: 'error', text: 'Please select an image file (JPG, PNG, WEBP)' });
+            return;
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'File size must be less than 10MB' });
+            return;
+        }
+        setSelectedFile(file);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setPreviewUrl(reader.result);
+        };
+        reader.readAsDataURL(file);
+    };
 
     useEffect(() => {
         fetchWallpapers();
@@ -177,13 +78,15 @@ const Dashboard = ({ onLogout }) => {
             setLoading(true);
             const res = await axios.get(API_BASE_URL);
             setWallpapers(res.data);
-            setSelectedIds([]); // Clear selection on refresh
+            setSelectedIds([]);
         } catch (err) {
             console.error('Failed to fetch:', err);
         } finally {
             setLoading(false);
         }
     };
+
+
 
     const filteredWallpapers = wallpapers.filter(wp => {
         const matchesSearch = wp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -192,23 +95,18 @@ const Dashboard = ({ onLogout }) => {
         return matchesSearch && matchesCategory;
     });
 
+
+
     const handleDrag = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.type === "dragenter" || e.type === "dragover") {
-            setDragActive(true);
-        } else if (e.type === "dragleave") {
-            setDragActive(false);
-        }
+        e.preventDefault(); e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") setDragActive(true);
+        else if (e.type === "dragleave") setDragActive(false);
     };
 
     const handleDrop = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
+        e.preventDefault(); e.stopPropagation();
         setDragActive(false);
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFile(e.dataTransfer.files[0]);
-        }
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
     };
 
     const toggleSelection = (id) => {
@@ -219,7 +117,7 @@ const Dashboard = ({ onLogout }) => {
 
     const handleBulkDelete = async () => {
         if (!selectedIds.length) return;
-        if (!window.confirm(`Delete ${selectedIds.length} wallpapers?`)) return;
+        if (!window.confirm(`Delete ${selectedIds.length} wallpapers from DB and Storage?`)) return;
 
         setIsBulkDeleting(true);
         try {
@@ -246,7 +144,7 @@ const Dashboard = ({ onLogout }) => {
         setUploadProgress(0);
 
         try {
-            const res = await axios.post(API_BASE_URL, formData, {
+            await axios.post(API_BASE_URL, formData, {
                 onUploadProgress: (progressEvent) => {
                     const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
                     setUploadProgress(progress);
@@ -255,7 +153,7 @@ const Dashboard = ({ onLogout }) => {
 
             setMessage({ type: 'success', text: 'Wallpaper uploaded successfully!' });
             resetForm();
-            fetchWallpapers();
+            if (viewMode === 'live') fetchWallpapers(); else fetchBucketInfo();
         } catch (err) {
             setMessage({ type: 'error', text: 'Upload failed: ' + (err.response?.data?.msg || err.message) });
         } finally {
@@ -264,16 +162,12 @@ const Dashboard = ({ onLogout }) => {
     };
 
     const resetForm = () => {
-        setTitle('');
-        setCategory('Nature');
-        setSelectedFile(null);
-        setPreviewUrl(null);
+        setTitle(''); setCategory('Nature'); setSelectedFile(null); setPreviewUrl(null);
         setTimeout(() => setMessage(null), 3000);
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this wallpaper?')) return;
-
+        if (!window.confirm('Delete this wallpaper?')) return;
         try {
             await axios.delete(`${API_BASE_URL}/${id}`);
             setMessage({ type: 'success', text: 'Wallpaper deleted' });
@@ -283,6 +177,8 @@ const Dashboard = ({ onLogout }) => {
         }
     };
 
+
+
     return (
         <div className="min-h-screen p-4 md:p-8 max-w-[1400px] mx-auto">
             {/* Header */}
@@ -291,13 +187,8 @@ const Dashboard = ({ onLogout }) => {
                     <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">Amozea Admin</h1>
                     <p className="text-white/40 text-sm">Manage your premium AMOLED & 4K collection</p>
                 </div>
-                <button
-                    onClick={onLogout}
-                    className="glass p-3 rounded-full hover:bg-white/10 transition-colors"
-                >
-                    <LogOut size={20} className="text-white/60" />
-                </button>
             </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Upload Section */}
                 <div className="lg:col-span-4 space-y-6">
@@ -309,25 +200,19 @@ const Dashboard = ({ onLogout }) => {
                         <form onSubmit={handleUpload} className="space-y-4">
                             <div
                                 className={`relative h-64 border-2 border-dashed rounded-2xl transition-all flex flex-center items-center justify-center overflow-hidden
-                  ${dragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 bg-white/5'}
-                  ${previewUrl ? 'border-none' : ''}`}
-                                onDragEnter={handleDrag}
-                                onDragLeave={handleDrag}
-                                onDragOver={handleDrag}
-                                onDrop={handleDrop}
+                                ${dragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 bg-white/5'}
+                                ${previewUrl ? 'border-none' : ''}`}
+                                onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
                             >
                                 {previewUrl ? (
                                     <>
                                         <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        <button
-                                            onClick={() => setPreviewUrl(null)}
-                                            className="absolute top-2 right-2 bg-black/50 p-2 rounded-full hover:bg-black/80"
-                                        >
+                                        <button onClick={() => setPreviewUrl(null)} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full hover:bg-black/80">
                                             <Trash2 size={16} />
                                         </button>
                                     </>
                                 ) : (
-                                    <label className="cursor-pointer text-center p-6">
+                                    <label className="cursor-pointer text-center p-6 w-full">
                                         <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files[0])} accept="image/*" />
                                         <Upload size={40} className="mx-auto mb-4 text-white/20" />
                                         <p className="text-white/60 font-medium">Drag & Drop or click to browse</p>
@@ -338,12 +223,7 @@ const Dashboard = ({ onLogout }) => {
 
                             <div>
                                 <label className="text-xs uppercase font-bold text-white/40 block mb-2 px-1">Title</label>
-                                <input
-                                    type="text"
-                                    placeholder="Enter wallpaper title..."
-                                    value={title}
-                                    onChange={(e) => setTitle(e.target.value)}
-                                />
+                                <input type="text" placeholder="Enter wallpaper title..." value={title} onChange={(e) => setTitle(e.target.value)} />
                             </div>
 
                             <div>
@@ -353,33 +233,15 @@ const Dashboard = ({ onLogout }) => {
                                 </select>
                             </div>
 
-                            <button
-                                type="submit"
-                                className="primary-btn w-full flex items-center justify-center gap-2 mt-4"
-                                disabled={!selectedFile || isUploading}
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <RefreshCw size={18} className="animate-spin" />
-                                        Uploading {uploadProgress}%
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload size={18} />
-                                        Push to Production
-                                    </>
-                                )}
+                            <button type="submit" className="primary-btn w-full flex items-center justify-center gap-2 mt-4" disabled={!selectedFile || isUploading}>
+                                {isUploading ? <><RefreshCw size={18} className="animate-spin" /> Uploading {uploadProgress}%</> : <><Upload size={18} /> Push to Production</>}
                             </button>
                         </form>
 
                         <AnimatePresence>
                             {message && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0 }}
-                                    className={`mt-4 p-3 rounded-xl flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}
-                                >
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                    className={`mt-4 p-3 rounded-xl flex items-center gap-2 text-sm ${message.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                                     {message.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
                                     {message.text}
                                 </motion.div>
@@ -392,40 +254,29 @@ const Dashboard = ({ onLogout }) => {
                 <div className="lg:col-span-8 space-y-6">
                     <div className="glass p-6 rounded-3xl min-h-[600px]">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                            <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <ImageIcon size={20} className="text-purple-400" />
-                                    Live Gallery
-                                </h2>
-                                {selectedIds.length > 0 && (
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        disabled={isBulkDeleting}
-                                        className="bg-red-500/20 text-red-100 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/80 transition-all"
-                                    >
-                                        {isBulkDeleting ? <RefreshCw className="animate-spin" size={14} /> : <Trash2 size={14} />}
-                                        Delete {selectedIds.length} Items
-                                    </button>
-                                )}
+                            <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-4">
+                                    <h2 className="text-xl font-bold flex items-center gap-2">
+                                        <ImageIcon size={20} className="text-purple-400" />
+                                        Live Gallery
+                                    </h2>
+                                    {selectedIds.length > 0 && (
+                                        <button onClick={handleBulkDelete} disabled={isBulkDeleting} className="bg-red-500/20 text-red-100 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-red-500/80 transition-all">
+                                            {isBulkDeleting ? <RefreshCw className="animate-spin" size={14} /> : <Trash2 size={14} />}
+                                            Delete {selectedIds.length} Items
+                                        </button>
+                                    )}
+                                </div>
                             </div>
+
                             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
-                                <select
-                                    value={filterCategory}
-                                    onChange={(e) => setFilterCategory(e.target.value)}
-                                    className="text-xs font-bold py-2 w-full sm:w-40 border-none bg-indigo-500/10 text-indigo-300 rounded-xl cursor-pointer hover:bg-indigo-500/20 transition-all"
-                                >
+                                <select value={filterCategory} onChange={(e) => setFilterCategory(e.target.value)} className="text-xs font-bold py-2 w-full sm:w-40 border-none bg-indigo-500/10 text-indigo-300 rounded-xl cursor-pointer hover:bg-indigo-500/20 transition-all">
                                     <option value="All">All Categories</option>
                                     {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                 </select>
                                 <div className="relative w-full sm:w-64">
                                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" />
-                                    <input
-                                        type="text"
-                                        placeholder="Search title..."
-                                        className="pl-10 text-sm py-2"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
-                                    />
+                                    <input type="text" placeholder="Search..." className="pl-10 text-sm py-2" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
                                 </div>
                             </div>
                         </div>
@@ -438,41 +289,17 @@ const Dashboard = ({ onLogout }) => {
                         ) : (
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 xl:grid-cols-6 gap-3">
                                 {filteredWallpapers.map((wp) => (
-                                    <motion.div
-                                        layout
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        key={wp._id}
-                                        onClick={() => toggleSelection(wp._id)}
+                                    <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} key={wp._id} onClick={() => toggleSelection(wp._id)}
                                         className={`group glass rounded-xl overflow-hidden aspect-square relative cursor-pointer transition-all duration-300 ${selectedIds.includes(wp._id) ? 'ring-2 ring-indigo-500 ring-offset-4 ring-offset-[#0c0c0e] scale-[0.9]' : ''}`}
                                     >
-                                        <img
-                                            src={wp.imageUrl.low || wp.imageUrl.original}
-                                            alt=""
-                                            className={`w-full h-full object-cover transition-all duration-500 ${selectedIds.includes(wp._id) ? 'opacity-100 scale-110' : 'opacity-60 group-hover:opacity-100'}`}
-                                        />
-
-                                        {/* Selection Indicator */}
-                                        {selectedIds.includes(wp._id) && (
-                                            <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-lg z-10">
-                                                <CheckCircle2 size={16} />
-                                            </div>
-                                        )}
-
+                                        <img src={wp.imageUrl.low || wp.imageUrl.original} alt="" className={`w-full h-full object-cover transition-all duration-500 ${selectedIds.includes(wp._id) ? 'opacity-100 scale-110' : 'opacity-60 group-hover:opacity-100'}`} />
+                                        {selectedIds.includes(wp._id) && <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-lg z-10"><CheckCircle2 size={16} /></div>}
                                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                                             <p className="text-xs font-bold truncate">{wp.title}</p>
                                             <p className="text-[10px] text-white/40 uppercase tracking-widest">{wp.category}</p>
                                         </div>
-                                        {/* Actions on hover */}
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                            {/* Single Delete button (stop propagation to avoid selection toggle) */}
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(wp._id);
-                                                }}
-                                                className="bg-red-500/20 p-3 rounded-full hover:bg-red-500/80 transition-all text-red-100"
-                                            >
+                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(wp._id); }} className="bg-red-500/20 p-3 rounded-full hover:bg-red-500/80 transition-all text-red-100">
                                                 <Trash2 size={18} />
                                             </button>
                                         </div>
@@ -488,39 +315,16 @@ const Dashboard = ({ onLogout }) => {
 };
 
 const App = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('adminAuthToken'));
-
-    const handleLogin = (token) => {
-        localStorage.setItem('adminAuthToken', token);
-        setIsAuthenticated(true);
-    };
-
-    const handleLogout = () => {
-        localStorage.removeItem('adminAuthToken');
-        setIsAuthenticated(false);
-    };
-
     return (
         <AnimatePresence mode="wait">
-            {!isAuthenticated ? (
-                <motion.div
-                    key="login"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                >
-                    <Login onLogin={handleLogin} />
-                </motion.div>
-            ) : (
-                <motion.div
-                    key="dashboard"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                >
-                    <Dashboard onLogout={handleLogout} />
-                </motion.div>
-            )}
+            <motion.div
+                key="dashboard"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+            >
+                <Dashboard />
+            </motion.div>
         </AnimatePresence>
     );
 };

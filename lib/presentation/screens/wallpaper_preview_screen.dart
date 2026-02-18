@@ -112,7 +112,7 @@ class _WallpaperPreviewScreenState
       if (widget.localFile != null) {
         file = widget.localFile;
       } else {
-        file = await _downloadFile(widget.wallpaper!.url);
+        file = await _downloadFile(_highResUrl);
       }
 
       if (file != null) {
@@ -226,7 +226,7 @@ class _WallpaperPreviewScreenState
   Future<void> _shareWallpaper() async {
     if (widget.localFile != null) return; // Already on device
     final l10n = AppLocalizations.of(context)!;
-    final file = await _downloadFile(widget.wallpaper!.url);
+    final file = await _downloadFile(_highResUrl);
     if (file != null) {
       final newPath =
           '${file.parent.path}/${file.uri.pathSegments.last.replaceAll(RegExp(r'\.[^.]+$'), '')}.png';

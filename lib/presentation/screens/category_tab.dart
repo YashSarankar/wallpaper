@@ -5,10 +5,10 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import '../../data/models/wallpaper_model.dart';
 import 'package:flutter/cupertino.dart';
 import '../widgets/universal_image.dart';
-import 'wallpaper_preview_screen.dart';
 import '../providers/settings_provider.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
+import '../widgets/wallpaper_card.dart';
 
 import 'package:wallpaper/l10n/app_localizations.dart';
 import 'package:wallpaper/core/extensions/l10n_extensions.dart';
@@ -258,64 +258,12 @@ class CategoryDetailScreen extends ConsumerWidget {
               mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
               crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
               itemBuilder: (context, index) {
-                return _CategoryWallpaperCard(
-                  wallpaper: category.wallpapers[index],
-                );
+                return WallpaperCard(wallpaper: category.wallpapers[index]);
               },
               childCount: category.wallpapers.length,
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CategoryWallpaperCard extends StatelessWidget {
-  final WallpaperModel wallpaper;
-
-  const _CategoryWallpaperCard({required this.wallpaper});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        final heroTag = '${wallpaper.id}_category_${context.hashCode}';
-        Navigator.push(
-          context,
-          PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 500),
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                WallpaperPreviewScreen(wallpaper: wallpaper, heroTag: heroTag),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-          ),
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Hero(
-            tag: '${wallpaper.id}_category_${context.hashCode}',
-            child: UniversalImage(
-              path: wallpaper.midUrl ?? wallpaper.url,
-              thumbnailUrl: wallpaper.lowUrl,
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
       ),
     );
   }

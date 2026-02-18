@@ -49,7 +49,7 @@ router.get('/category/:category', async (req, res) => {
 // @route   POST /api/wallpapers
 // @desc    Add a new wallpaper (supports file upload)
 // @access  Private
-router.post('/', [auth, upload.single('image')], async (req, res) => {
+router.post('/', upload.single('image'), async (req, res) => {
     try {
         const { title, category } = req.body;
         let imageUrl = req.body.imageUrl;
@@ -72,7 +72,7 @@ router.post('/', [auth, upload.single('image')], async (req, res) => {
 
 // @route   DELETE api/wallpapers/:id
 // @access  Private
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
         const id = req.params.id;
 
@@ -111,7 +111,7 @@ router.delete('/:id', auth, async (req, res) => {
 
 // @route   POST api/wallpapers/bulk-delete
 // @access  Private
-router.post('/bulk-delete', auth, async (req, res) => {
+router.post('/bulk-delete', async (req, res) => {
     try {
         const { ids } = req.body;
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
