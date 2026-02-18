@@ -3,6 +3,7 @@ package com.amozea.wallpapers
 import android.app.WallpaperManager
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -63,13 +64,38 @@ class MainActivity: FlutterFragmentActivity() {
                     return@Thread
                 }
 
+                // Calculate crop hint to center the image
+                val metrics = resources.displayMetrics
+                val screenWidth = metrics.widthPixels
+                val screenHeight = metrics.heightPixels
+                
+                val bitmapWidth = bitmap.width
+                val bitmapHeight = bitmap.height
+
+                val screenAspect = screenWidth.toFloat() / screenHeight.toFloat()
+                val bitmapAspect = bitmapWidth.toFloat() / bitmapHeight.toFloat()
+
+                val cropRect: Rect
+
+                if (bitmapAspect > screenAspect) {
+                     // Image is wider than screen, crop width
+                     val newWidth = (bitmapHeight * screenAspect).toInt()
+                     val startX = (bitmapWidth - newWidth) / 2
+                     cropRect = Rect(startX, 0, startX + newWidth, bitmapHeight)
+                } else {
+                     // Image is taller than screen, crop height
+                     val newHeight = (bitmapWidth / screenAspect).toInt()
+                     val startY = (bitmapHeight - newHeight) / 2
+                     cropRect = Rect(0, startY, bitmapWidth, startY + newHeight)
+                }
+
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                     // 1 = Home, 2 = Lock, 3 = Both
                     if (location == 1 || location == 3) {
-                        wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_SYSTEM)
+                        wallpaperManager.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_SYSTEM)
                     }
                     if (location == 2 || location == 3) {
-                        wallpaperManager.setBitmap(bitmap, null, true, WallpaperManager.FLAG_LOCK)
+                        wallpaperManager.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_LOCK)
                     }
                 } else {
                     wallpaperManager.setBitmap(bitmap)

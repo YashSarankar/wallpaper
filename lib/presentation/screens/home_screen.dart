@@ -120,13 +120,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                   child: Container(
-                    height: 90, // Reduced from 100
-                    padding: const EdgeInsets.fromLTRB(
+                    height: MediaQuery.of(context).padding.top + 60,
+                    padding: EdgeInsets.fromLTRB(
                       20,
-                      48,
+                      MediaQuery.of(context).padding.top + 10,
                       20,
                       0,
-                    ), // Adjusted top padding
+                    ),
                     color: (isDarkMode ? Colors.black : Colors.white)
                         .withOpacity(0.7),
                     child: Row(

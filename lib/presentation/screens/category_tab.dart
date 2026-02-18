@@ -28,7 +28,9 @@ class CategoryTab extends ConsumerWidget {
         return CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+            SliverToBoxAdapter(
+              child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
+            ),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverGrid(
@@ -216,7 +218,6 @@ class CategoryDetailScreen extends ConsumerWidget {
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
-            expandedHeight: 120,
             floating: false,
             pinned: true,
             elevation: 0,

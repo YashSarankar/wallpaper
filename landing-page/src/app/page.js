@@ -124,7 +124,7 @@ export default function AmozeaLanding() {
                     <div className="flex gap-8 mb-10 text-slate-500 text-sm font-medium">
                         <a href="https://sarankar.com" className="hover:text-white transition-colors">Developer Website</a>
                         <a href="/privacy" className="hover:text-white transition-colors">Privacy Policy</a>
-                        <a href="mailto:support@sarankar.com" className="hover:text-white transition-colors">Support</a>
+                        <a href="/support" className="hover:text-white transition-colors">Support</a>
                     </div>
                     <p className="text-slate-700 text-xs tracking-widest uppercase font-bold">
                         &copy; 2026 Sarankar Developers. All rights reserved.

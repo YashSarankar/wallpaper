@@ -32,9 +32,9 @@ class HomeTab extends ConsumerWidget {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 95),
-        ), // Reduced from 110
+        SliverToBoxAdapter(
+          child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
+        ),
         // Premium Sub-Tab Selector
         SliverToBoxAdapter(
           child: Padding(

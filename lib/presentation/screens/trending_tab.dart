@@ -21,7 +21,9 @@ class TrendingTab extends ConsumerWidget {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        const SliverToBoxAdapter(child: SizedBox(height: 95)),
+        SliverToBoxAdapter(
+          child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
+        ),
         if (trendingWallpapers.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
