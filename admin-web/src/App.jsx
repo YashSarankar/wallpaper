@@ -9,7 +9,10 @@ import {
     RefreshCw,
     Search,
     CheckCircle2,
-    AlertCircle
+    AlertCircle,
+    Lock,
+    LogOut,
+    User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,8 +28,99 @@ const getBaseUrl = () => {
 
 const BASE_API = getBaseUrl();
 const API_BASE_URL = `${BASE_API}/wallpapers`;
+const LOGIN_URL = `${BASE_API}/auth/login`;
 
-const Dashboard = () => {
+// Axios Interceptor for Auth
+axios.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('adminToken');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+const Login = ({ onLogin }) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        setError('');
+        try {
+            const res = await axios.post(LOGIN_URL, { username, password });
+            localStorage.setItem('adminToken', res.data.token);
+            onLogin(res.data.token);
+        } catch (err) {
+            setError(err.response?.data?.msg || 'Invalid credentials or server error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="min-h-screen flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="glass p-8 rounded-3xl w-full max-w-md space-y-6"
+            >
+                <div className="text-center space-y-2">
+                    <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">Amozea Admin</h1>
+                    <p className="text-white/40 text-sm">Sign in to manage your collection</p>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                        <label className="text-xs uppercase font-bold text-white/40 flex items-center gap-2 px-1">
+                            <User size={14} /> Username
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="Enter username"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <label className="text-xs uppercase font-bold text-white/40 flex items-center gap-2 px-1">
+                            <Lock size={14} /> Password
+                        </label>
+                        <input
+                            type="password"
+                            placeholder="Enter password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-500/10 text-red-400 p-3 rounded-xl text-xs flex items-center gap-2">
+                            <AlertCircle size={14} /> {error}
+                        </div>
+                    )}
+
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="primary-btn w-full flex items-center justify-center gap-2"
+                    >
+                        {loading ? <RefreshCw className="animate-spin" size={18} /> : 'Access Dashboard'}
+                    </button>
+                </form>
+            </motion.div>
+        </div>
+    );
+};
+
+const Dashboard = ({ onLogout }) => {
     const [wallpapers, setWallpapers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isUploading, setIsUploading] = useState(false);
@@ -81,12 +175,13 @@ const Dashboard = () => {
             setSelectedIds([]);
         } catch (err) {
             console.error('Failed to fetch:', err);
+            if (err.response?.status === 401) {
+                onLogout();
+            }
         } finally {
             setLoading(false);
         }
     };
-
-
 
     const filteredWallpapers = wallpapers.filter(wp => {
         const matchesSearch = wp.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -94,8 +189,6 @@ const Dashboard = () => {
         const matchesCategory = filterCategory === 'All' || wp.category === filterCategory;
         return matchesSearch && matchesCategory;
     });
-
-
 
     const handleDrag = (e) => {
         e.preventDefault(); e.stopPropagation();
@@ -125,7 +218,8 @@ const Dashboard = () => {
             setMessage({ type: 'success', text: `${selectedIds.length} wallpapers deleted` });
             fetchWallpapers();
         } catch (err) {
-            setMessage({ type: 'error', text: 'Bulk delete failed' });
+            setMessage({ type: 'error', text: 'Bulk delete failed: ' + (err.response?.data?.msg || err.message) });
+            if (err.response?.status === 401) onLogout();
         } finally {
             setIsBulkDeleting(false);
         }
@@ -153,9 +247,10 @@ const Dashboard = () => {
 
             setMessage({ type: 'success', text: 'Wallpaper uploaded successfully!' });
             resetForm();
-            if (viewMode === 'live') fetchWallpapers(); else fetchBucketInfo();
+            fetchWallpapers();
         } catch (err) {
             setMessage({ type: 'error', text: 'Upload failed: ' + (err.response?.data?.msg || err.message) });
+            if (err.response?.status === 401) onLogout();
         } finally {
             setIsUploading(false);
         }
@@ -173,11 +268,10 @@ const Dashboard = () => {
             setMessage({ type: 'success', text: 'Wallpaper deleted' });
             fetchWallpapers();
         } catch (err) {
-            setMessage({ type: 'error', text: 'Delete failed' });
+            setMessage({ type: 'error', text: 'Delete failed: ' + (err.response?.data?.msg || err.message) });
+            if (err.response?.status === 401) onLogout();
         }
     };
-
-
 
     return (
         <div className="min-h-screen p-4 md:p-8 max-w-[1400px] mx-auto">
@@ -187,6 +281,12 @@ const Dashboard = () => {
                     <h1 className="text-3xl font-extrabold gradient-text uppercase tracking-tighter">Amozea Admin</h1>
                     <p className="text-white/40 text-sm">Manage your premium AMOLED & 4K collection</p>
                 </div>
+                <button
+                    onClick={onLogout}
+                    className="glass px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center gap-2"
+                >
+                    <LogOut size={14} /> Logout
+                </button>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -315,16 +415,34 @@ const Dashboard = () => {
 };
 
 const App = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('adminToken'));
+
+    const handleLogout = () => {
+        localStorage.removeItem('adminToken');
+        setIsAuthenticated(false);
+    };
+
     return (
         <AnimatePresence mode="wait">
-            <motion.div
-                key="dashboard"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-            >
-                <Dashboard />
-            </motion.div>
+            {!isAuthenticated ? (
+                <motion.div
+                    key="login"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                >
+                    <Login onLogin={() => setIsAuthenticated(true)} />
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="dashboard"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                >
+                    <Dashboard onLogout={handleLogout} />
+                </motion.div>
+            )}
         </AnimatePresence>
     );
 };
