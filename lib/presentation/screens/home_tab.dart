@@ -19,15 +19,16 @@ class HomeTab extends ConsumerWidget {
     final selectedSubTab = ref.watch(homeSubTabProvider);
     final randomWallpapers = ref.watch(randomWallpapersProvider);
     final latestWallpapers = ref.watch(latestWallpapersProvider);
+    final liveWallpapers = ref.watch(liveWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
     final settings = ref.watch(settingsProvider);
     final color = isDarkMode ? Colors.white : Colors.black;
     final wallpapersAsync = ref.watch(wallpapersProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    final displayedWallpapers = selectedSubTab == 0
-        ? randomWallpapers
-        : latestWallpapers;
+    final displayedWallpapers = selectedSubTab == 2
+        ? liveWallpapers
+        : (selectedSubTab == 0 ? randomWallpapers : latestWallpapers);
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -56,9 +57,11 @@ class HomeTab extends ConsumerWidget {
                     curve: Curves.easeInOutCubic,
                     alignment: selectedSubTab == 0
                         ? Alignment.centerLeft
-                        : Alignment.centerRight,
+                        : (selectedSubTab == 1
+                              ? Alignment.center
+                              : Alignment.centerRight),
                     child: FractionallySizedBox(
-                      widthFactor: 0.5,
+                      widthFactor: 1 / 3,
                       child: Container(
                         margin: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
@@ -92,6 +95,14 @@ class HomeTab extends ConsumerWidget {
                           ref,
                           l10n.latest,
                           1,
+                          isDarkMode,
+                        ),
+                      ),
+                      Expanded(
+                        child: _buildSubNavItem(
+                          ref,
+                          'Live', // Fallback until L10n regenerates
+                          2,
                           isDarkMode,
                         ),
                       ),

@@ -134,8 +134,11 @@ const Dashboard = ({ onLogout }) => {
     // Form State
     const [title, setTitle] = useState('');
     const [category, setCategory] = useState('Nature');
-    const [selectedFile, setSelectedFile] = useState(null);
+    const [type, setType] = useState('static');
+    const [selectedFile, setSelectedFile] = useState(null); // This is the image/preview
+    const [videoFile, setVideoFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
+    const [videoPreviewUrl, setVideoPreviewUrl] = useState(null);
     const [message, setMessage] = useState(null);
 
     const categories = [
@@ -152,20 +155,32 @@ const Dashboard = ({ onLogout }) => {
 
     const handleFile = (file) => {
         if (!file) return;
-        if (!file.type.startsWith('image/')) {
-            setMessage({ type: 'error', text: 'Please select an image file (JPG, PNG, WEBP)' });
-            return;
+        if (file.type.startsWith('image/')) {
+            if (file.size > 10 * 1024 * 1024) {
+                setMessage({ type: 'error', text: 'Image size must be less than 10MB' });
+                return;
+            }
+            setSelectedFile(file);
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setPreviewUrl(reader.result);
+            };
+            reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+            if (type !== 'animated') {
+                setMessage({ type: 'error', text: 'Change type to "Animated" to upload videos' });
+                return;
+            }
+            if (file.size > 50 * 1024 * 1024) {
+                setMessage({ type: 'error', text: 'Video size must be less than 50MB' });
+                return;
+            }
+            setVideoFile(file);
+            const url = URL.createObjectURL(file);
+            setVideoPreviewUrl(url);
+        } else {
+            setMessage({ type: 'error', text: 'Unsupported file type' });
         }
-        if (file.size > 10 * 1024 * 1024) {
-            setMessage({ type: 'error', text: 'File size must be less than 10MB' });
-            return;
-        }
-        setSelectedFile(file);
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setPreviewUrl(reader.result);
-        };
-        reader.readAsDataURL(file);
     };
 
     useEffect(() => {
@@ -232,12 +247,21 @@ const Dashboard = ({ onLogout }) => {
 
     const handleUpload = async (e) => {
         e.preventDefault();
-        if (!selectedFile) return;
+        if (!selectedFile) {
+            setMessage({ type: 'error', text: 'Preview image is required' });
+            return;
+        }
+        if (type === 'animated' && !videoFile) {
+            setMessage({ type: 'error', text: 'Video file is required for animated wallpapers' });
+            return;
+        }
 
         const formData = new FormData();
         formData.append('title', title || 'Untitled');
         formData.append('category', category);
+        formData.append('type', type);
         formData.append('image', selectedFile);
+        if (videoFile) formData.append('video', videoFile);
 
         setIsUploading(true);
         setUploadProgress(0);
@@ -262,7 +286,13 @@ const Dashboard = ({ onLogout }) => {
     };
 
     const resetForm = () => {
-        setTitle(''); setCategory('Nature'); setSelectedFile(null); setPreviewUrl(null);
+        setTitle('');
+        setCategory('Nature');
+        setType('static');
+        setSelectedFile(null);
+        setVideoFile(null);
+        setPreviewUrl(null);
+        setVideoPreviewUrl(null);
         setTimeout(() => setMessage(null), 3000);
     };
 
@@ -303,26 +333,76 @@ const Dashboard = ({ onLogout }) => {
                         </h2>
 
                         <form onSubmit={handleUpload} className="space-y-4">
-                            <div
-                                className={`relative h-64 border-2 border-dashed rounded-2xl transition-all flex flex-center items-center justify-center overflow-hidden
-                                ${dragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 bg-white/5'}
-                                ${previewUrl ? 'border-none' : ''}`}
-                                onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
-                            >
-                                {previewUrl ? (
-                                    <>
-                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        <button onClick={() => setPreviewUrl(null)} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full hover:bg-black/80">
-                                            <Trash2 size={16} />
-                                        </button>
-                                    </>
-                                ) : (
-                                    <label className="cursor-pointer text-center p-6 w-full">
-                                        <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files[0])} accept="image/*" />
-                                        <Upload size={40} className="mx-auto mb-4 text-white/20" />
-                                        <p className="text-white/60 font-medium">Drag & Drop or click to browse</p>
-                                        <p className="text-white/30 text-xs mt-2">Support: JPG, PNG, WEBP (Max 10MB)</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setType('static')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${type === 'static' ? 'bg-indigo-500 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                                >
+                                    Static
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setType('animated')}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase transition-all ${type === 'animated' ? 'bg-indigo-500 text-white' : 'bg-white/5 text-white/40 hover:bg-white/10'}`}
+                                >
+                                    Animated
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs uppercase font-bold text-white/40 block mb-2 px-1">
+                                        {type === 'animated' ? 'Preview Image' : 'Wallpaper Image'}
                                     </label>
+                                    <div
+                                        className={`relative h-48 border-2 border-dashed rounded-2xl transition-all flex flex-center items-center justify-center overflow-hidden
+                                        ${dragActive ? 'border-indigo-500 bg-indigo-500/10' : 'border-white/10 bg-white/5'}
+                                        ${previewUrl ? 'border-none' : ''}`}
+                                        onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
+                                    >
+                                        {previewUrl ? (
+                                            <>
+                                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                                <button type="button" onClick={() => { setSelectedFile(null); setPreviewUrl(null); }} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full hover:bg-black/80">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <label className="cursor-pointer text-center p-6 w-full">
+                                                <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files[0])} accept="image/*" />
+                                                <ImageIcon size={32} className="mx-auto mb-4 text-white/20" />
+                                                <p className="text-white/60 text-sm font-medium">Add Image</p>
+                                                <p className="text-white/30 text-[10px] mt-1">JPG, PNG, WEBP</p>
+                                            </label>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {type === 'animated' && (
+                                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}>
+                                        <label className="text-xs uppercase font-bold text-white/40 block mb-2 px-1">Video File</label>
+                                        <div
+                                            className={`relative h-48 border-2 border-dashed rounded-2xl transition-all flex flex-center items-center justify-center overflow-hidden
+                                            ${videoPreviewUrl ? 'border-none' : 'border-white/10 bg-white/5'}`}
+                                        >
+                                            {videoPreviewUrl ? (
+                                                <>
+                                                    <video src={videoPreviewUrl} autoPlay muted loop className="w-full h-full object-cover" />
+                                                    <button type="button" onClick={() => { setVideoFile(null); setVideoPreviewUrl(null); }} className="absolute top-2 right-2 bg-black/50 p-2 rounded-full hover:bg-black/80">
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <label className="cursor-pointer text-center p-6 w-full">
+                                                    <input type="file" className="hidden" onChange={(e) => handleFile(e.target.files[0])} accept="video/*" />
+                                                    <Upload size={32} className="mx-auto mb-4 text-white/20" />
+                                                    <p className="text-white/60 text-sm font-medium">Add Video</p>
+                                                    <p className="text-white/30 text-[10px] mt-1">MP4, MOV (Max 50MB)</p>
+                                                </label>
+                                            )}
+                                        </div>
+                                    </motion.div>
                                 )}
                             </div>
 
@@ -342,7 +422,7 @@ const Dashboard = ({ onLogout }) => {
                                 </select>
                             </div>
 
-                            <button type="submit" className="primary-btn w-full flex items-center justify-center gap-2 mt-4" disabled={!selectedFile || isUploading}>
+                            <button type="submit" className="primary-btn w-full flex items-center justify-center gap-2 mt-4" disabled={!selectedFile || (type === 'animated' && !videoFile) || isUploading}>
                                 {isUploading ? <><RefreshCw size={18} className="animate-spin" /> Uploading {uploadProgress}%</> : <><Upload size={18} /> Push to Production</>}
                             </button>
                         </form>
@@ -406,6 +486,13 @@ const Dashboard = ({ onLogout }) => {
                                         className={`group glass rounded-xl overflow-hidden aspect-square relative cursor-pointer transition-all duration-300 ${selectedIds.includes(wp._id) ? 'ring-2 ring-indigo-500 ring-offset-4 ring-offset-[#0c0c0e] scale-[0.9]' : ''}`}
                                     >
                                         <img src={wp.imageUrl.low || wp.imageUrl.original} alt="" className={`w-full h-full object-cover transition-all duration-500 ${selectedIds.includes(wp._id) ? 'opacity-100 scale-110' : 'opacity-60 group-hover:opacity-100'}`} />
+
+                                        {wp.type === 'animated' && (
+                                            <div className="absolute top-2 left-2 bg-indigo-500 text-[8px] font-black uppercase tracking-tighter text-white px-2 py-0.5 rounded-full shadow-lg z-10">
+                                                Live
+                                            </div>
+                                        )}
+
                                         {selectedIds.includes(wp._id) && <div className="absolute top-2 right-2 bg-indigo-500 text-white rounded-full p-1 shadow-lg z-10"><CheckCircle2 size={16} /></div>}
                                         <div className="absolute inset-x-0 bottom-0 p-3 bg-gradient-to-t from-black/80 to-transparent">
                                             <p className="text-xs font-bold truncate">{wp.title}</p>

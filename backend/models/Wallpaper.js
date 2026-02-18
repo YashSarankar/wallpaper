@@ -24,6 +24,14 @@ const WallpaperSchema = new mongoose.Schema({
             required: true,
         }
     },
+    type: {
+        type: String,
+        enum: ['static', 'animated'],
+        default: 'static',
+    },
+    videoUrl: {
+        type: String,
+    },
     createdAt: {
         type: Date,
         default: Date.now,

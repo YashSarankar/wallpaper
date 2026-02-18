@@ -62,6 +62,11 @@ final latestWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
   return ref.watch(allWallpapersProvider);
 });
 
+final liveWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
+  final all = ref.watch(allWallpapersProvider);
+  return all.where((w) => w.type == 'animated').toList();
+});
+
 final trendingWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
   final all = ref.watch(allWallpapersProvider);
   return all.where((w) => w.category.toLowerCase() == 'trending').toList();

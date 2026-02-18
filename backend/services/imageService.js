@@ -3,15 +3,14 @@ const sharp = require('sharp');
 const path = require('path');
 
 // Helper to upload a buffer to GCS
-const uploadBuffer = (buffer, filename) => {
+const uploadBuffer = (buffer, filename, contentType = 'image/jpeg') => {
     return new Promise((resolve, reject) => {
         console.log(`Uploading to GCS: ${filename}...`);
         const blob = bucket.file(filename);
         const blobStream = blob.createWriteStream({
             resumable: false,
-            // predefinedAcl: 'publicRead', // Removed because bucket has Uniform Access enabled
             metadata: {
-                contentType: 'image/jpeg',
+                contentType: contentType,
             }
         });
 
@@ -59,10 +58,19 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
 
     // Parallel upload
     const [original, mid, low] = await Promise.all([
-        uploadBuffer(originalBuffer, originalPath),
-        uploadBuffer(midBuffer, midPath),
-        uploadBuffer(lowBuffer, lowPath)
+        uploadBuffer(originalBuffer, originalPath, 'image/jpeg'),
+        uploadBuffer(midBuffer, midPath, 'image/jpeg'),
+        uploadBuffer(lowBuffer, lowPath, 'image/jpeg')
     ]);
 
     return { original, mid, low };
+};
+
+exports.uploadVideo = async (fileBuffer, originalName, mimetype) => {
+    const timestamp = Date.now();
+    const cleanName = path.parse(originalName).name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
+    const extension = path.extname(originalName) || '.mp4';
+    const filename = `wallpapers/videos/${timestamp}-${cleanName}${extension}`;
+
+    return await uploadBuffer(fileBuffer, filename, mimetype);
 };

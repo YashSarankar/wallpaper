@@ -2,6 +2,8 @@ package com.amozea.wallpapers
 
 import android.app.WallpaperManager
 import android.content.Intent
+import android.content.ComponentName
+import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Rect
 import android.net.Uri
@@ -45,9 +47,39 @@ class MainActivity: FlutterFragmentActivity() {
                 } else {
                     result.error("INVALID_ARGUMENT", "Path missing", null)
                 }
+            } else if (call.method == "setLiveWallpaper") {
+                val path = call.argument<String>("path")
+                if (path != null) {
+                    setLiveWallpaperNative(path, result)
+                } else {
+                    result.error("INVALID_ARGUMENT", "Path missing", null)
+                }
             } else {
                 result.notImplemented()
             }
+        }
+    }
+
+    private fun setLiveWallpaperNative(path: String, result: MethodChannel.Result) {
+        try {
+            // Save path to SharedPreferences for the service to read
+            val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("video_path", path).apply()
+
+            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+            intent.putExtra(
+                WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                android.content.ComponentName(
+                    "com.amozea.wallpapers",
+                    "com.amozea.wallpapers.VideoWallpaperService"
+                )
+            )
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+            result.success(true)
+
+        } catch (e: Exception) {
+            result.error("INTENT_ERROR", e.message, null)
         }
     }
 

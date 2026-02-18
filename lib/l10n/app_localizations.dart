@@ -529,6 +529,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Black'**
   String get catBlack;
+
+  /// No description provided for @liveWallpapers.
+  ///
+  /// In en, this message translates to:
+  /// **'Live'**
+  String get liveWallpapers;
 }
 
 class _AppLocalizationsDelegate

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Wallpaper = require('../models/Wallpaper');
 const multer = require('multer');
-const { processAndUploadImage } = require('../services/imageService');
+const { processAndUploadImage, uploadVideo } = require('../services/imageService');
 const { bucket } = require('../config/gcs');
 const auth = require('../middleware/auth');
 
@@ -10,9 +10,14 @@ const auth = require('../middleware/auth');
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 10 * 1024 * 1024, // 10MB limit
+        fileSize: 50 * 1024 * 1024, // 50MB limit for videos
     },
 });
+
+const wallpaperUpload = upload.fields([
+    { name: 'image', maxCount: 1 },
+    { name: 'video', maxCount: 1 }
+]);
 
 // @route   GET /api/wallpapers
 // @desc    Get all wallpapers
@@ -49,23 +54,38 @@ router.get('/category/:category', async (req, res) => {
 // @route   POST /api/wallpapers
 // @desc    Add a new wallpaper (supports file upload)
 // @access  Private
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', auth, wallpaperUpload, async (req, res) => {
     try {
-        const { title, category } = req.body;
+        const { title, category, type } = req.body;
         let imageUrl = req.body.imageUrl;
+        let videoUrl = req.body.videoUrl;
 
-        if (req.file) {
-            imageUrl = await processAndUploadImage(req.file.buffer, req.file.originalname);
+        // Handle Image Upload
+        if (req.files && req.files.image) {
+            imageUrl = await processAndUploadImage(req.files.image[0].buffer, req.files.image[0].originalname);
+        }
+
+        // Handle Video Upload
+        if (req.files && req.files.video) {
+            videoUrl = await uploadVideo(req.files.video[0].buffer, req.files.video[0].originalname, req.files.video[0].mimetype);
         }
 
         if (!imageUrl) {
-            return res.status(400).json({ msg: 'Image is required' });
+            return res.status(400).json({ msg: 'Image (or preview image) is required' });
         }
 
-        const newWallpaper = new Wallpaper({ title, category, imageUrl });
+        const newWallpaper = new Wallpaper({
+            title,
+            category,
+            imageUrl,
+            type: type || 'static',
+            videoUrl
+        });
+
         const wallpaper = await newWallpaper.save();
         res.json(wallpaper);
     } catch (err) {
+        console.error('UPLOAD ERROR:', err);
         res.status(500).json({ msg: 'Server processing error', error: err.message });
     }
 });
@@ -88,11 +108,18 @@ router.delete('/:id', auth, async (req, res) => {
                 const midPath = lowPath.replace('/low/', '/mid/');
                 const originalPath = lowPath.replace('/low/', '/original/');
 
-                await Promise.all([
+                const deletePromises = [
                     bucket.file(lowPath).delete().catch(() => { }),
                     bucket.file(midPath).delete().catch(() => { }),
                     bucket.file(originalPath).delete().catch(() => { }),
-                ]);
+                ];
+
+                if (wallpaper.videoUrl) {
+                    const videoPath = wallpaper.videoUrl.split('.com/')[1].split('/').slice(1).join('/');
+                    deletePromises.push(bucket.file(videoPath).delete().catch(() => { }));
+                }
+
+                await Promise.all(deletePromises);
             } catch (e) {
                 console.error('GCS Cleanup Error:', e.message);
             }
@@ -128,11 +155,18 @@ router.post('/bulk-delete', auth, async (req, res) => {
                     const midPath = lowPath.replace('/low/', '/mid/');
                     const originalPath = lowPath.replace('/low/', '/original/');
 
-                    await Promise.all([
+                    const deletePromises = [
                         bucket.file(lowPath).delete().catch(() => { }),
                         bucket.file(midPath).delete().catch(() => { }),
                         bucket.file(originalPath).delete().catch(() => { }),
-                    ]);
+                    ];
+
+                    if (wallpaper.videoUrl) {
+                        const videoPath = wallpaper.videoUrl.split('.com/')[1].split('/').slice(1).join('/');
+                        deletePromises.push(bucket.file(videoPath).delete().catch(() => { }));
+                    }
+
+                    await Promise.all(deletePromises);
                 } catch (e) {
                     console.error('GCS Cleanup Error (Bulk):', e.message);
                 }

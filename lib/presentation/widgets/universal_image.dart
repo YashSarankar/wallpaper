@@ -53,7 +53,7 @@ class UniversalImage extends StatelessWidget {
         fadeOutDuration: const Duration(milliseconds: 300),
         placeholder: (context, url) =>
             placeholder ??
-            (thumbnailUrl != null
+            (thumbnailUrl != null && thumbnailUrl != path
                 ? CachedNetworkImage(
                     imageUrl: thumbnailUrl!,
                     fit: fit,

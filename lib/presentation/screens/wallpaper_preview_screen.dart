@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:video_player/video_player.dart';
+import 'package:async_wallpaper/async_wallpaper.dart';
 
 import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
@@ -36,7 +38,44 @@ class _WallpaperPreviewScreenState
   bool _isSetting = false;
   double? _progress;
   bool _showPreviewUI = true;
+  VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
+
+  @override
+  void initState() {
+    super.initState();
+    // Hide status bar and navigation bar for a true full-screen preview
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
+    if (widget.wallpaper?.type == 'animated' &&
+        widget.wallpaper?.videoUrl != null) {
+      _initVideo();
+    }
+  }
+
+  void _initVideo() {
+    _videoController =
+        VideoPlayerController.networkUrl(Uri.parse(widget.wallpaper!.videoUrl!))
+          ..initialize().then((_) {
+            if (mounted) {
+              setState(() {
+                _isVideoInitialized = true;
+                _videoController?.setLooping(true);
+                _videoController?.setVolume(0); // Muted by default
+                _videoController?.play();
+              });
+            }
+          });
+  }
+
+  @override
+  void dispose() {
+    // Restore system UI appearance
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _videoController?.dispose();
+    super.dispose();
+  }
 
   String get _highResUrl {
     if (widget.localFile != null) return widget.localFile!.path;
@@ -109,9 +148,44 @@ class _WallpaperPreviewScreenState
   }
 
   Future<void> _setWallpaper(int location) async {
+    if (_isSetting) return;
     final l10n = AppLocalizations.of(context)!;
     setState(() => _isSetting = true);
     try {
+      if (widget.wallpaper?.type == 'animated' &&
+          widget.wallpaper?.videoUrl != null) {
+        // For live wallpaper, we skip our internal selection because
+        // Android opens its own system picker for Live Wallpapers anyway.
+        final file = await _downloadFile(widget.wallpaper!.videoUrl!);
+        if (file != null) {
+          try {
+            // Hide preview UI before opening system picker
+            setState(() => _showPreviewUI = false);
+
+            // 1. Prepare via plugin
+            await AsyncWallpaper.setLiveWallpaper(filePath: file.path);
+
+            // 2. Launch via custom native picker for the return-to-app feature
+            await platform.invokeMethod('setLiveWallpaper', {
+              'path': file.path,
+            });
+
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
+            }
+          } on PlatformException catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('${l10n.failedToSet}: ${e.message}')),
+              );
+            }
+          }
+        }
+        return;
+      }
+
       File? file;
       if (widget.localFile != null) {
         file = widget.localFile;
@@ -350,24 +424,36 @@ class _WallpaperPreviewScreenState
                       (isLocal
                           ? 'local_${widget.localFile?.path}'
                           : widget.wallpaper!.id),
-                  child: UniversalImage(
-                    path: _highResUrl,
-                    thumbnailUrl: isLocal
-                        ? null
-                        : (widget.wallpaper!.midUrl ??
-                              widget.wallpaper!.lowUrl),
-                    fit: BoxFit.cover, // Fill the screen to avoid blank spaces
-                    borderRadius: 0,
-                    cacheWidth: 3840,
-                    alignment: Alignment.center,
-                    errorWidget: const Center(
-                      child: Icon(
-                        CupertinoIcons.exclamationmark_circle,
-                        color: Colors.white24,
-                        size: 40,
-                      ),
-                    ),
-                  ),
+                  child: _isVideoInitialized && _videoController != null
+                      ? SizedBox.expand(
+                          child: FittedBox(
+                            fit: BoxFit.cover,
+                            child: SizedBox(
+                              width: _videoController!.value.size.width,
+                              height: _videoController!.value.size.height,
+                              child: VideoPlayer(_videoController!),
+                            ),
+                          ),
+                        )
+                      : UniversalImage(
+                          path: _highResUrl,
+                          thumbnailUrl: isLocal
+                              ? null
+                              : (widget.wallpaper!.midUrl ??
+                                    widget.wallpaper!.lowUrl),
+                          fit: BoxFit
+                              .cover, // Fill the screen to avoid blank spaces
+                          borderRadius: 0,
+                          cacheWidth: 2000,
+                          alignment: Alignment.center,
+                          errorWidget: const Center(
+                            child: Icon(
+                              CupertinoIcons.exclamationmark_circle,
+                              color: Colors.white24,
+                              size: 40,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ),
@@ -493,8 +579,10 @@ class _WallpaperPreviewScreenState
                               isLoading: _progress != null,
                             ),
                           if (!isLocal) const SizedBox(width: 4),
-                          _buildSetAction(l10n),
-                          if (!isLocal) const SizedBox(width: 4),
+                          if (widget.wallpaper?.type != 'animated')
+                            _buildSetAction(l10n),
+                          if (widget.wallpaper?.type != 'animated' && !isLocal)
+                            const SizedBox(width: 4),
                           _buildActionIcon(
                             icon: isFav
                                 ? CupertinoIcons.heart_fill
@@ -619,8 +707,12 @@ class _WallpaperPreviewScreenState
   }
 
   Widget _buildSetAction(AppLocalizations l10n) {
+    final isAnimated = widget.wallpaper?.type == 'animated';
+
     return GestureDetector(
-      onTap: _isSetting ? null : _showSetWallpaperOptions,
+      onTap: _isSetting
+          ? null
+          : (isAnimated ? () => _setWallpaper(3) : _showSetWallpaperOptions),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         height: 54,
@@ -646,7 +738,7 @@ class _WallpaperPreviewScreenState
                   ),
                 )
               : Text(
-                  l10n.apply,
+                  isAnimated ? 'SET LIVE' : l10n.apply,
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w900,
