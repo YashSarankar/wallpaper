@@ -73,6 +73,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     ref.read(wallpapersProvider);
 
     _mainController.forward();
+
+    // Fallback safety: If for some reason Lottie fails to signal completion,
+    // navigate anyway after 5 seconds to prevent being stuck.
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted) _navigateToHome();
+    });
   }
 
   @override
@@ -187,21 +193,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 onLoaded: (composition) {
                                   _lottieController
                                     ..duration = composition.duration
-                                    ..forward().then((_) async {
-                                      // Wait for data to be ready before navigating
-                                      try {
-                                        // Wait up to 15 seconds for wallpapers, then proceed anyway
-                                        // The Home screen will handle its own loading/error state
-                                        await ref
-                                            .read(wallpapersProvider.future)
-                                            .timeout(
-                                              const Duration(seconds: 15),
-                                            );
-                                      } catch (e) {
-                                        debugPrint(
-                                          'Pre-fetching wallpapers failed or timed out: $e',
-                                        );
-                                      }
+                                    ..forward().then((_) {
                                       _navigateToHome();
                                     });
                                 },
@@ -252,55 +244,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
                       const Spacer(flex: 4),
 
-                      // iOS Style Loading Indicator
+                      // Developer Branding
                       FadeTransition(
                         opacity: _textOpacityAnimation,
                         child: Padding(
-                          padding: const EdgeInsets.only(bottom: 60),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(100),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 24,
-                                  vertical: 12,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.04),
-                                  borderRadius: BorderRadius.circular(100),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    SizedBox(
-                                      width: 14,
-                                      height: 14,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              Colors.white.withOpacity(0.6),
-                                            ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Text(
-                                      l10n.preparingExperience,
-                                      style: TextStyle(
-                                        color: Colors.white.withOpacity(0.5),
-                                        fontSize: 9,
-                                        letterSpacing: 2,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
+                          padding: const EdgeInsets.only(bottom: 40),
+                          child: Column(
+                            children: [
+                              Text(
+                                'FROM',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.3),
+                                  fontSize: 9,
+                                  letterSpacing: 4,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 6),
+                              Text(
+                                'SarankarDevelopers',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 13,
+                                  letterSpacing: 1.5,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),

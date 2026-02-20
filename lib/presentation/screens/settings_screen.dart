@@ -267,6 +267,9 @@ class SettingsScreen extends ConsumerWidget {
                 child: DropdownButton<int>(
                   value:
                       [
+                        1200,
+                        21600,
+                        43200,
                         86400,
                         172800,
                         604800,
@@ -278,9 +281,17 @@ class SettingsScreen extends ConsumerWidget {
                     color: isDarkMode ? Colors.white : Colors.black,
                     fontSize: 13,
                   ),
-                  items: [86400, 172800, 604800].map((int value) {
+                  items: [1200, 21600, 43200, 86400, 172800, 604800].map((
+                    int value,
+                  ) {
                     String label;
-                    if (value == 86400) {
+                    if (value == 1200) {
+                      label = '20 Minutes (Test)';
+                    } else if (value == 21600) {
+                      label = '6 Hours';
+                    } else if (value == 43200) {
+                      label = '12 Hours';
+                    } else if (value == 86400) {
                       label = 'Daily';
                     } else if (value < 604800) {
                       label = '${value ~/ 86400} Days';
@@ -399,6 +410,31 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ),
             isDarkMode: isDarkMode,
+          ),
+          const SizedBox(height: 20),
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  'Developed by',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white38 : Colors.black38,
+                    fontSize: 10,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'SarankarDevelopers',
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white70 : Colors.black87,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 50),
         ],

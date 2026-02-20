@@ -227,5 +227,5 @@ class AppLocalizationsFr extends AppLocalizations {
   String get catBlack => 'Noir';
 
   @override
-  String get liveWallpapers => 'Live';
+  String get live => 'Animé';
 }

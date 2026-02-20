@@ -41,6 +41,9 @@ class _WallpaperPreviewScreenState
   VideoPlayerController? _videoController;
   bool _isVideoInitialized = false;
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
+  static const backgroundPlatform = MethodChannel(
+    'com.amozea.wallpapers/wallpaper_background',
+  );
 
   @override
   void initState() {
@@ -159,21 +162,49 @@ class _WallpaperPreviewScreenState
         final file = await _downloadFile(widget.wallpaper!.videoUrl!);
         if (file != null) {
           try {
-            // Hide preview UI before opening system picker
-            setState(() => _showPreviewUI = false);
+            // Check if our live wallpaper is already active
+            bool isLiveActive = false;
+            try {
+              isLiveActive = await backgroundPlatform.invokeMethod(
+                'isLiveWallpaperActive',
+              );
+            } catch (e) {
+              debugPrint('Error checking if live wallpaper is active: $e');
+            }
 
-            // 1. Prepare via plugin
-            await AsyncWallpaper.setLiveWallpaper(filePath: file.path);
+            if (isLiveActive) {
+              // Silent update!
+              await backgroundPlatform.invokeMethod(
+                'updateLiveWallpaperSilent',
+                {'path': file.path},
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
+              }
+            } else {
+              // Need to show the system preview
+              // Hide preview UI before opening system picker
+              setState(() => _showPreviewUI = false);
 
-            // 2. Launch via custom native picker for the return-to-app feature
-            await platform.invokeMethod('setLiveWallpaper', {
-              'path': file.path,
-            });
+              // 1. Prepare via plugin (used by some devices/versions)
+              try {
+                await AsyncWallpaper.setLiveWallpaper(filePath: file.path);
+              } catch (e) {
+                debugPrint('AsyncWallpaper error (ignoring): $e');
+              }
 
-            if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
+              // 2. Launch via custom native picker for the return-to-app feature
+              await platform.invokeMethod('setLiveWallpaper', {
+                'path': file.path,
+              });
+
+              if (mounted) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
+              }
             }
           } on PlatformException catch (e) {
             if (mounted) {
@@ -738,7 +769,7 @@ class _WallpaperPreviewScreenState
                   ),
                 )
               : Text(
-                  isAnimated ? 'SET LIVE' : l10n.apply,
+                  isAnimated ? l10n.live.toUpperCase() : l10n.apply,
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w900,

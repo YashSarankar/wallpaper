@@ -16,8 +16,6 @@ import 'presentation/providers/wallpaper_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/screens/splash_screen.dart';
 
-import 'package:async_wallpaper/async_wallpaper.dart';
-
 const String autoChangeTask = "com.amozea.wallpapers.autoChange";
 
 @pragma('vm:entry-point')
@@ -52,23 +50,31 @@ void callbackDispatcher() {
       final wallpaper = favorites[random.nextInt(favorites.length)];
       debugPrint('Selected wallpaper: ${wallpaper.id} (${wallpaper.url})');
 
+      final bool isAnimated = wallpaper.type == 'animated';
+      final String downloadUrl = isAnimated
+          ? (wallpaper.videoUrl ?? wallpaper.url)
+          : wallpaper.url;
+      final String extension = isAnimated ? 'mp4' : 'png';
+
       String? finalPath;
 
-      if (wallpaper.url.startsWith('http')) {
-        debugPrint('Downloading image from URL...');
+      if (downloadUrl.startsWith('http')) {
+        debugPrint(
+          'Downloading ${isAnimated ? "video" : "image"} from URL: $downloadUrl',
+        );
         http.Response? response;
         int retries = 0;
         while (retries < 3) {
           try {
             response = await http
                 .get(
-                  Uri.parse(wallpaper.url),
+                  Uri.parse(downloadUrl),
                   headers: {
                     'User-Agent':
                         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                   },
                 )
-                .timeout(const Duration(seconds: 45));
+                .timeout(const Duration(seconds: 60));
 
             if (response.statusCode == 200) break;
             debugPrint(
@@ -83,25 +89,64 @@ void callbackDispatcher() {
 
         if (response != null && response.statusCode == 200) {
           final tempDir = await getTemporaryDirectory();
-          final file = File('${tempDir.path}/auto_wallpaper.png');
+          final file = File('${tempDir.path}/auto_wallpaper.$extension');
           await file.writeAsBytes(response.bodyBytes);
           finalPath = file.path;
-          debugPrint('Image saved to: $finalPath');
+          debugPrint('File saved to: $finalPath');
         } else {
-          debugPrint('Failed to download image after retries.');
+          debugPrint('Failed to download file after retries.');
         }
       } else {
-        finalPath = wallpaper.url;
+        finalPath = downloadUrl;
         debugPrint('Using local file path: $finalPath');
       }
 
       if (finalPath != null && await File(finalPath).exists()) {
         try {
-          debugPrint('Setting wallpaper...');
-          await AsyncWallpaper.setWallpaperFromFile(
-            filePath: finalPath,
-            wallpaperLocation: AsyncWallpaper.BOTH_SCREENS,
+          const platform = MethodChannel(
+            'com.amozea.wallpapers/wallpaper_background',
           );
+
+          if (isAnimated) {
+            debugPrint('Handling animated wallpaper change...');
+            final bool isLiveActive = await platform.invokeMethod(
+              'isLiveWallpaperActive',
+            );
+
+            if (isLiveActive) {
+              debugPrint(
+                'Live wallpaper ACTIVE. Silently updating video path.',
+              );
+              await platform.invokeMethod('updateLiveWallpaperSilent', {
+                'path': finalPath,
+              });
+            } else {
+              debugPrint('Live wallpaper NOT active. Setting static cover.');
+              // We need the static image, not the video file
+              // Download the cover (wallpaper.midUrl or wallpaper.url)
+              final coverUrl = wallpaper.midUrl ?? wallpaper.url;
+              final tempDir = await getTemporaryDirectory();
+              final coverFile = File('${tempDir.path}/auto_fallback.png');
+
+              final response = await http
+                  .get(Uri.parse(coverUrl))
+                  .timeout(const Duration(seconds: 30));
+              if (response.statusCode == 200) {
+                await coverFile.writeAsBytes(response.bodyBytes);
+                await platform.invokeMethod('setStaticWallpaper', {
+                  'path': coverFile.path,
+                  'location': 3, // Both screens
+                });
+                debugPrint('Fallback static wallpaper set.');
+              }
+            }
+          } else {
+            debugPrint('Setting static wallpaper via native channel...');
+            await platform.invokeMethod('setStaticWallpaper', {
+              'path': finalPath,
+              'location': 3, // Both screens
+            });
+          }
 
           await prefs.setInt(
             'lastAutoChange',
@@ -109,8 +154,9 @@ void callbackDispatcher() {
           );
           debugPrint('--- WALLPAPER CHANGED SUCCESSFULLY ---');
         } catch (e) {
-          debugPrint('Error setting wallpaper: $e');
-          return false;
+          debugPrint('Error setting wallpaper in background: $e');
+          // Still return true to avoid Workmanager blocking the task
+          return true;
         }
       } else {
         debugPrint('Final path is null or file does not exist.');
@@ -126,12 +172,13 @@ void callbackDispatcher() {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Only await essential local storage
   await LocalStorageService.init();
 
-  await Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
-
-  // Initialize Mobile Ads SDK
-  await MobileAds.instance.initialize();
+  // Initialize these in background without awaiting to speed up cold start
+  Workmanager().initialize(callbackDispatcher, isInDebugMode: false);
+  MobileAds.instance.initialize();
 
   // Enable Edge-to-Edge for Android 15+ compatibility
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

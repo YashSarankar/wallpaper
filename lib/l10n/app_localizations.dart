@@ -530,11 +530,11 @@ abstract class AppLocalizations {
   /// **'Black'**
   String get catBlack;
 
-  /// No description provided for @liveWallpapers.
+  /// No description provided for @live.
   ///
   /// In en, this message translates to:
   /// **'Live'**
-  String get liveWallpapers;
+  String get live;
 }
 
 class _AppLocalizationsDelegate

@@ -75,7 +75,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await prefs.setInt('autoChangeFrequency', freq);
     }
 
-    const allowed = [86400, 172800, 604800];
+    const allowed = [1200, 21600, 43200, 86400, 172800, 604800];
     if (!allowed.contains(freq)) {
       freq = 86400;
       await prefs.setInt('autoChangeFrequency', freq);
@@ -103,6 +103,14 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
 
     if (enabled) {
       _scheduleTask(ExistingPeriodicWorkPolicy.replace);
+
+      // Trigger immediate change when enabled
+      Workmanager().registerOneOffTask(
+        "oneOffAutoChange_${DateTime.now().millisecondsSinceEpoch}",
+        autoChangeTask,
+        tag: autoChangeTask,
+        constraints: Constraints(networkType: NetworkType.connected),
+      );
     } else {
       await Workmanager().cancelByTag(autoChangeTask);
     }

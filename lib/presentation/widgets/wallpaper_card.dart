@@ -13,6 +13,7 @@ import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import '../screens/wallpaper_preview_screen.dart';
 import 'universal_image.dart';
+import 'package:wallpaper/l10n/app_localizations.dart';
 
 class WallpaperCard extends ConsumerStatefulWidget {
   final WallpaperModel wallpaper;
@@ -104,6 +105,7 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
     final favorites = ref.watch(favoritesProvider);
     final isFav = favorites.any((w) => w.id == widget.wallpaper.id);
     final settings = ref.watch(settingsProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return GestureDetector(
       onTap: () {
@@ -216,18 +218,18 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
                             color: Colors.white.withOpacity(0.1),
                           ),
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
+                            const Icon(
                               CupertinoIcons.play_circle_fill,
                               color: Colors.white,
                               size: 14,
                             ),
-                            SizedBox(width: 4),
+                            const SizedBox(width: 4),
                             Text(
-                              'LIVE',
-                              style: TextStyle(
+                              l10n.live.toUpperCase(),
+                              style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w900,

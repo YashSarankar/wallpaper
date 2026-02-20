@@ -224,5 +224,5 @@ class AppLocalizationsJa extends AppLocalizations {
   String get catBlack => '黒';
 
   @override
-  String get liveWallpapers => 'Live';
+  String get live => 'ライブ';
 }

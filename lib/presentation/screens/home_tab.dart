@@ -99,12 +99,7 @@ class HomeTab extends ConsumerWidget {
                         ),
                       ),
                       Expanded(
-                        child: _buildSubNavItem(
-                          ref,
-                          'Live', // Fallback until L10n regenerates
-                          2,
-                          isDarkMode,
-                        ),
+                        child: _buildSubNavItem(ref, l10n.live, 2, isDarkMode),
                       ),
                     ],
                   ),

@@ -30,6 +30,8 @@ class MainActivity: FlutterFragmentActivity() {
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        flutterEngine.plugins.add(WallpaperPlugin())
+        
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
             if (call.method == "setWallpaper") {
                 val path = call.argument<String>("path")
@@ -65,6 +67,11 @@ class MainActivity: FlutterFragmentActivity() {
             // Save path to SharedPreferences for the service to read
             val prefs = getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
             prefs.edit().putString("video_path", path).apply()
+
+            // Send broadcast to update the service if it's already running
+            val updateIntent = Intent("com.amozea.wallpapers.UPDATE_VIDEO")
+            updateIntent.putExtra("video_path", path)
+            sendBroadcast(updateIntent)
 
             val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
             intent.putExtra(
