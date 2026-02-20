@@ -101,6 +101,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/applogo.png
+    - assets/company_splash_logo.png
     - assets/heart.png
     - assets/settings.png
     - assets/wallpapers.json  # Used for Lottie animation

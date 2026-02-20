@@ -5,8 +5,8 @@
 
     <!-- Displays the logo in the center of the screen during cold boot -->
     <item
-        android:width="120dp"
-        android:height="120dp"
+        android:width="140dp"
+        android:height="140dp"
         android:gravity="center">
         <bitmap
             android:src="@drawable/company_splash_logo" />
