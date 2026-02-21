@@ -1,0 +1,69 @@
+name: Google Play Production Deployment
+
+on:
+  push:
+    tags:
+      - 'v*' # Triggers on tags starting with 'v' e.g., v1.2.0
+
+jobs:
+  deploy:
+    name: Build & Release to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Flutter Analyze
+        run: flutter analyze
+
+      - name: Flutter Test
+        run: flutter test
+
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+
+      - name: Create key.properties
+        run: |
+          echo "storePassword=${{ secrets.KEYSTORE_PASSWORD }}" > android/key.properties
+          echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+          echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+          echo "storeFile=upload-keystore.jks" >> android/key.properties
+
+      - name: Extract Version Name
+        id: get_version
+        run: echo "VERSION_NAME=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Build Release AAB
+        run: |
+          # Calculate version code: GITHUB_RUN_NUMBER + 10 (Current is 8)
+          VERSION_CODE=$((GITHUB_RUN_NUMBER + 10))
+          flutter build appbundle --release \
+            --build-name=${{ steps.get_version.outputs.VERSION_NAME }} \
+            --build-number=$VERSION_CODE
+
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonKeyData: ${{ secrets.PLAY_STORE_CONFIG_JSON }}
+          packageName: com.amozea.wallpapers
+          releaseFiles: build/app/outputs/bundle/release/app-release.aab
+          track: production
+          status: completed # Change to 'draft' if you want to manual-review first
