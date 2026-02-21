@@ -1,6 +1,4 @@
-import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../data/services/api_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/repositories/wallpaper_repository_impl.dart';
@@ -37,9 +35,13 @@ String _getLangCode(String language) {
 
 // Logic
 final wallpapersProvider = FutureProvider<List<CategoryModel>>((ref) async {
-  final settings = ref.watch(settingsProvider);
-  final langCode = _getLangCode(settings.language);
-  return ref.watch(wallpaperRepositoryProvider).getWallpapers(langCode);
+  final language = ref.watch(settingsProvider.select((s) => s.language));
+  final langCode = _getLangCode(language);
+  final categories = await ref
+      .watch(wallpaperRepositoryProvider)
+      .getWallpapers(langCode);
+
+  return categories;
 });
 
 // Derived Providers
@@ -52,19 +54,26 @@ final allWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
 });
 
 final randomWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
-  final all = [...ref.watch(allWallpapersProvider)];
+  final all = [
+    ...ref.watch(allWallpapersProvider),
+  ].where((w) => w.type != 'animated').toList();
   all.shuffle();
   return all;
 });
 
 final latestWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
   // Assuming the order delivered by API is already sorted by newest
-  return ref.watch(allWallpapersProvider);
+  return ref
+      .watch(allWallpapersProvider)
+      .where((w) => w.type != 'animated')
+      .toList();
 });
 
 final liveWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
-  final all = ref.watch(allWallpapersProvider);
-  return all.where((w) => w.type == 'animated').toList();
+  return ref
+      .watch(allWallpapersProvider)
+      .where((w) => w.type == 'animated')
+      .toList();
 });
 
 final trendingWallpapersProvider = Provider<List<WallpaperModel>>((ref) {
@@ -85,58 +94,3 @@ class ThemeNotifier extends StateNotifier<bool> {
 final themeProvider = StateNotifierProvider<ThemeNotifier, bool>((ref) {
   return ThemeNotifier();
 });
-
-// Favorites Logic
-class FavoritesNotifier extends StateNotifier<List<WallpaperModel>> {
-  FavoritesNotifier() : super(LocalStorageService.getFavorites());
-
-  Future<void> toggleFavorite(WallpaperModel wallpaper) async {
-    if (LocalStorageService.isFavorite(wallpaper.id)) {
-      await LocalStorageService.removeFromFavorites(wallpaper.id);
-    } else {
-      await LocalStorageService.addToFavorites(wallpaper);
-    }
-    state = LocalStorageService.getFavorites();
-  }
-
-  Future<void> toggleLocalFavorite(File file) async {
-    final id = 'local_${file.path.hashCode}';
-    if (LocalStorageService.isFavorite(id)) {
-      final existing = state.firstWhere((w) => w.id == id);
-      if (existing.url.contains('custom_wallpapers')) {
-        try {
-          final f = File(existing.url);
-          if (await f.exists()) await f.delete();
-        } catch (_) {}
-      }
-      await LocalStorageService.removeFromFavorites(id);
-    } else {
-      // Copy to internal storage
-      final appDir = await getApplicationDocumentsDirectory();
-      final customDir = Directory('${appDir.path}/custom_wallpapers');
-      if (!await customDir.exists()) await customDir.create();
-
-      final fileName =
-          'custom_${DateTime.now().millisecondsSinceEpoch}.${file.path.split('.').last}';
-      final newFile = await file.copy('${customDir.path}/$fileName');
-
-      final localWallpaper = WallpaperModel(
-        id: id,
-        type: 'static',
-        url: newFile.path,
-        category: 'Custom',
-      );
-      await LocalStorageService.addToFavorites(localWallpaper);
-    }
-    state = LocalStorageService.getFavorites();
-  }
-
-  bool isFavorite(String id) {
-    return LocalStorageService.isFavorite(id);
-  }
-}
-
-final favoritesProvider =
-    StateNotifierProvider<FavoritesNotifier, List<WallpaperModel>>((ref) {
-      return FavoritesNotifier();
-    });

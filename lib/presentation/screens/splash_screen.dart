@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 import '../providers/wallpaper_provider.dart';
+import '../providers/settings_provider.dart';
 import 'home_screen.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
 
@@ -75,8 +76,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _mainController.forward();
 
     // Fallback safety: If for some reason Lottie fails to signal completion,
-    // navigate anyway after 5 seconds to prevent being stuck.
-    Future.delayed(const Duration(seconds: 5), () {
+    // navigate anyway after 6 seconds to prevent being stuck.
+    Future.delayed(const Duration(seconds: 6), () {
       if (mounted) _navigateToHome();
     });
   }
@@ -190,12 +191,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 controller: _lottieController,
                                 width: 200,
                                 height: 200,
-                                onLoaded: (composition) {
-                                  _lottieController
-                                    ..duration = composition.duration
-                                    ..forward().then((_) {
-                                      _navigateToHome();
-                                    });
+                                onLoaded: (composition) async {
+                                  _lottieController.duration =
+                                      composition.duration;
+                                  // Wait for the animation to finish
+                                  await _lottieController.forward();
+
+                                  // Wait for settings to be loaded first
+                                  await ref
+                                      .read(settingsProvider.notifier)
+                                      .stream
+                                      .firstWhere((s) => s.isInitialized)
+                                      .timeout(
+                                        const Duration(seconds: 2),
+                                        onTimeout: () =>
+                                            ref.read(settingsProvider),
+                                      );
+
+                                  // After animation and settings, wait for data if it's not ready yet
+                                  try {
+                                    await ref
+                                        .read(wallpapersProvider.future)
+                                        .timeout(const Duration(seconds: 3));
+                                  } catch (e) {
+                                    debugPrint(
+                                      'Splash timed out waiting for data: $e',
+                                    );
+                                  }
+
+                                  _navigateToHome();
                                 },
                               ),
                             ),
@@ -285,8 +309,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     );
   }
 
+  bool _navigationTriggered = false;
+
   void _navigateToHome() {
-    if (!mounted) return;
+    if (!mounted || _navigationTriggered) return;
+    _navigationTriggered = true;
+
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>

@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../utils/ad_helper.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/favorites_provider.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -258,7 +259,28 @@ class SettingsScreen extends ConsumerWidget {
             isDarkMode: isDarkMode,
           ),
           if (settings.autoChangeEnabled) ...[
+            if (settings.lastAutoChange > 0) ...[
+              const SizedBox(height: 8),
+              _buildSettingsTile(
+                context,
+                icon: CupertinoIcons.time,
+                title: 'Last Auto Change',
+                trailing: Text(
+                  TimeOfDay.fromDateTime(
+                    DateTime.fromMillisecondsSinceEpoch(
+                      settings.lastAutoChange,
+                    ),
+                  ).format(context),
+                  style: TextStyle(
+                    color: isDarkMode ? Colors.white38 : Colors.black38,
+                    fontSize: 13,
+                  ),
+                ),
+                isDarkMode: isDarkMode,
+              ),
+            ],
             const SizedBox(height: 8),
+
             _buildSettingsTile(
               context,
               icon: CupertinoIcons.clock,
@@ -267,6 +289,7 @@ class SettingsScreen extends ConsumerWidget {
                 child: DropdownButton<int>(
                   value:
                       [
+                        60,
                         1200,
                         21600,
                         43200,
@@ -281,12 +304,14 @@ class SettingsScreen extends ConsumerWidget {
                     color: isDarkMode ? Colors.white : Colors.black,
                     fontSize: 13,
                   ),
-                  items: [1200, 21600, 43200, 86400, 172800, 604800].map((
+                  items: [60, 1200, 21600, 43200, 86400, 172800, 604800].map((
                     int value,
                   ) {
                     String label;
-                    if (value == 1200) {
-                      label = '20 Minutes (Test)';
+                    if (value == 60) {
+                      label = '1 Minute (Test)';
+                    } else if (value == 1200) {
+                      label = '20 Minutes';
                     } else if (value == 21600) {
                       label = '6 Hours';
                     } else if (value == 43200) {

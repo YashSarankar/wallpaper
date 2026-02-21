@@ -20,7 +20,9 @@ class CategoryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final wallpapersAsync = ref.watch(wallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
-    final settings = ref.watch(settingsProvider);
+    final gridColumns = ref.watch(
+      settingsProvider.select((s) => s.gridColumns),
+    );
     final l10n = AppLocalizations.of(context)!;
 
     return wallpapersAsync.when(
@@ -35,10 +37,10 @@ class CategoryTab extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverGrid(
                 gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: settings.gridColumns,
-                  mainAxisSpacing: settings.gridColumns == 2 ? 16 : 10,
-                  crossAxisSpacing: settings.gridColumns == 2 ? 16 : 10,
-                  childAspectRatio: settings.gridColumns == 2 ? 0.85 : 0.75,
+                  crossAxisCount: gridColumns,
+                  mainAxisSpacing: gridColumns == 2 ? 16 : 10,
+                  crossAxisSpacing: gridColumns == 2 ? 16 : 10,
+                  childAspectRatio: gridColumns == 2 ? 0.85 : 0.75,
                 ),
                 delegate: SliverChildBuilderDelegate((context, index) {
                   final category = categories[index];
@@ -54,7 +56,7 @@ class CategoryTab extends ConsumerWidget {
                           child: _CategoryItem(
                             category: category,
                             isDarkMode: isDarkMode,
-                            isCompact: settings.gridColumns == 3,
+                            isCompact: gridColumns == 3,
                           ),
                         ),
                       );
@@ -67,7 +69,30 @@ class CategoryTab extends ConsumerWidget {
           ],
         );
       },
-      loading: () => const Center(child: CupertinoActivityIndicator()),
+      loading: () => CustomScrollView(
+        physics: const NeverScrollableScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                mainAxisSpacing: 16,
+                crossAxisSpacing: 16,
+                childAspectRatio: 0.85,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (context, index) =>
+                    _SkeletonCategoryCard(isDarkMode: isDarkMode),
+                childCount: 8,
+              ),
+            ),
+          ),
+        ],
+      ),
       error: (err, stack) =>
           Center(child: Text('${l10n.serverSleeping}: $err')),
     );
@@ -211,7 +236,9 @@ class CategoryDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = ref.watch(themeProvider);
-    final settings = ref.watch(settingsProvider);
+    final gridColumns = ref.watch(
+      settingsProvider.select((s) => s.gridColumns),
+    );
     return Scaffold(
       backgroundColor: isDarkMode ? Colors.black : Colors.white,
       body: CustomScrollView(
@@ -254,9 +281,9 @@ class CategoryDetailScreen extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
             sliver: SliverMasonryGrid.count(
-              crossAxisCount: settings.gridColumns,
-              mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
-              crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+              crossAxisCount: gridColumns,
+              mainAxisSpacing: gridColumns == 2 ? 12 : 8,
+              crossAxisSpacing: gridColumns == 2 ? 12 : 8,
               itemBuilder: (context, index) {
                 return WallpaperCard(wallpaper: category.wallpapers[index]);
               },
@@ -265,6 +292,57 @@ class CategoryDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _SkeletonCategoryCard extends StatefulWidget {
+  final bool isDarkMode;
+  const _SkeletonCategoryCard({required this.isDarkMode});
+
+  @override
+  State<_SkeletonCategoryCard> createState() => _SkeletonCategoryCardState();
+}
+
+class _SkeletonCategoryCardState extends State<_SkeletonCategoryCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        final baseColor = widget.isDarkMode
+            ? Colors.white.withOpacity(0.06)
+            : Colors.black.withOpacity(0.06);
+        final highlightColor = widget.isDarkMode
+            ? Colors.white.withOpacity(0.12)
+            : Colors.black.withOpacity(0.10);
+        return Container(
+          decoration: BoxDecoration(
+            color: Color.lerp(baseColor, highlightColor, _animation.value),
+            borderRadius: BorderRadius.circular(32),
+          ),
+        );
+      },
     );
   }
 }

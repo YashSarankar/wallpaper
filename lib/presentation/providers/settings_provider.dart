@@ -1,12 +1,23 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:workmanager/workmanager.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io';
+import 'favorites_provider.dart';
+import '../../data/models/wallpaper_model.dart';
 
 const String autoChangeTask = "com.amozea.wallpapers.autoChange";
 
 final settingsProvider = StateNotifierProvider<SettingsNotifier, SettingsState>(
   (ref) {
-    return SettingsNotifier();
+    final notifier = SettingsNotifier(ref);
+    // Watch favorites and disable auto-change if empty
+    ref.listen<List<WallpaperModel>>(favoritesProvider, (previous, next) {
+      if (next.isEmpty) {
+        notifier.setAutoChangeEnabled(false);
+      }
+    });
+    return notifier;
   },
 );
 
@@ -18,6 +29,7 @@ class SettingsState {
   final int autoChangeFrequency; // Seconds
   final int lastAutoChange; // Timestamp
   final String language;
+  final bool isInitialized;
 
   SettingsState({
     required this.gridColumns,
@@ -27,6 +39,7 @@ class SettingsState {
     required this.autoChangeFrequency,
     required this.lastAutoChange,
     required this.language,
+    this.isInitialized = false,
   });
 
   SettingsState copyWith({
@@ -37,6 +50,7 @@ class SettingsState {
     int? autoChangeFrequency,
     int? lastAutoChange,
     String? language,
+    bool? isInitialized,
   }) {
     return SettingsState(
       gridColumns: gridColumns ?? this.gridColumns,
@@ -46,12 +60,15 @@ class SettingsState {
       autoChangeFrequency: autoChangeFrequency ?? this.autoChangeFrequency,
       lastAutoChange: lastAutoChange ?? this.lastAutoChange,
       language: language ?? this.language,
+      isInitialized: isInitialized ?? this.isInitialized,
     );
   }
 }
 
 class SettingsNotifier extends StateNotifier<SettingsState> {
-  SettingsNotifier()
+  final Ref ref;
+
+  SettingsNotifier(this.ref)
     : super(
         SettingsState(
           gridColumns: 2,
@@ -75,7 +92,7 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       await prefs.setInt('autoChangeFrequency', freq);
     }
 
-    const allowed = [1200, 21600, 43200, 86400, 172800, 604800];
+    const allowed = [60, 1200, 21600, 43200, 86400, 172800, 604800];
     if (!allowed.contains(freq)) {
       freq = 86400;
       await prefs.setInt('autoChangeFrequency', freq);
@@ -89,10 +106,17 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
       autoChangeFrequency: freq,
       lastAutoChange: prefs.getInt('lastAutoChange') ?? 0,
       language: prefs.getString('language') ?? 'English',
+      isInitialized: true,
     );
 
+    // Final sanity check: if enabled but no favorites, turn off
     if (state.autoChangeEnabled) {
-      _scheduleTask(ExistingPeriodicWorkPolicy.keep);
+      final favorites = ref.read(favoritesProvider);
+      if (favorites.isEmpty) {
+        await setAutoChangeEnabled(false);
+      } else {
+        _scheduleTask(ExistingPeriodicWorkPolicy.keep);
+      }
     }
   }
 
@@ -102,6 +126,15 @@ class SettingsNotifier extends StateNotifier<SettingsState> {
     state = state.copyWith(autoChangeEnabled: enabled);
 
     if (enabled) {
+      if (Platform.isAndroid) {
+        final flutterLocalNotificationsPlugin =
+            FlutterLocalNotificationsPlugin();
+        await flutterLocalNotificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.requestNotificationsPermission();
+      }
       _scheduleTask(ExistingPeriodicWorkPolicy.replace);
 
       // Trigger immediate change when enabled

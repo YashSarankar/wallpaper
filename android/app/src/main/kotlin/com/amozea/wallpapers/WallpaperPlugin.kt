@@ -10,52 +10,47 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import java.io.File
+import android.graphics.BitmapFactory
+import android.graphics.Rect
+import android.os.Build
 
 class WallpaperPlugin: FlutterPlugin, MethodCallHandler {
     private lateinit var channel : MethodChannel
     private lateinit var context: Context
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.amozea.wallpapers/wallpaper_background")
+        channel = MethodChannel(flutterPluginBinding.binaryMessenger, "com.amozea.wallpapers/wallpaper")
         channel.setMethodCallHandler(this)
         context = flutterPluginBinding.applicationContext
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
-            "isLiveWallpaperActive" -> {
-                try {
-                    val wm = WallpaperManager.getInstance(context)
-                    val info = wm.wallpaperInfo
-                    val isActive = info != null && info.packageName == context.packageName
-                    result.success(isActive)
-                } catch (e: Exception) {
-                    result.success(false)
-                }
-            }
-            "updateLiveWallpaperSilent" -> {
+            "setWallpaper" -> {
                 val path = call.argument<String>("path")
+                val location = call.argument<Int>("location") ?: 3
                 if (path != null) {
-                    try {
-                        val prefs = context.getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
-                        prefs.edit().putString("video_path", path).apply()
-
-                        val updateIntent = Intent("com.amozea.wallpapers.UPDATE_VIDEO")
-                        updateIntent.putExtra("video_path", path)
-                        context.sendBroadcast(updateIntent)
-                        result.success(true)
-                    } catch (e: Exception) {
-                        result.error("UPDATE_ERROR", e.message, null)
-                    }
+                    setStaticWallpaper(path, location, result)
                 } else {
                     result.error("INVALID_ARGUMENT", "Path missing", null)
                 }
             }
-            "setStaticWallpaper" -> {
+            "setLiveWallpaper" -> {
                 val path = call.argument<String>("path")
-                val location = call.argument<Int>("location") ?: 3 // Both by default
                 if (path != null) {
-                    setStaticWallpaper(path, location, result)
+                    setLiveWallpaper(path, result)
+                } else {
+                    result.error("INVALID_ARGUMENT", "Path missing", null)
+                }
+            }
+            "isLiveWallpaperActive" -> {
+                result.success(isLiveWallpaperActive())
+            }
+            "openFile" -> {
+                val path = call.argument<String>("path")
+                if (path != null) {
+                    openFile(path, result)
                 } else {
                     result.error("INVALID_ARGUMENT", "Path missing", null)
                 }
@@ -64,52 +59,100 @@ class WallpaperPlugin: FlutterPlugin, MethodCallHandler {
         }
     }
 
-    private fun setStaticWallpaper(path: String, location: Int, result: Result) {
-        try {
-            val wm = WallpaperManager.getInstance(context)
-            val options = android.graphics.BitmapFactory.Options()
-            val bitmap = android.graphics.BitmapFactory.decodeFile(path, options)
+    private fun isLiveWallpaperActive(): Boolean {
+        val wm = WallpaperManager.getInstance(context)
+        val info = wm.wallpaperInfo
+        return info != null && info.packageName == context.packageName && info.serviceName == VideoWallpaperService::class.java.name
+    }
 
-            if (bitmap == null) {
-                result.error("DECODE_ERROR", "Failed to decode image", null)
+    private fun setLiveWallpaper(path: String, result: Result) {
+        try {
+            // 1. Save path to SharedPreferences so the Service can find it
+            val prefs = context.getSharedPreferences("wallpaper_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putString("live_wallpaper_path", path).apply()
+
+            // 2. Open Wallpaper Picker
+            val intent = Intent(WallpaperManager.ACTION_CHANGE_LIVE_WALLPAPER)
+            intent.putExtra(WallpaperManager.EXTRA_LIVE_WALLPAPER_COMPONENT,
+                ComponentName(context, VideoWallpaperService::class.java))
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+
+            result.success(true)
+        } catch (e: Exception) {
+            result.error("LIVE_SET_ERROR", e.message, null)
+        }
+    }
+
+    private fun openFile(path: String, result: Result) {
+        try {
+            val file = File(path)
+            if (!file.exists()) {
+                result.error("FILE_NOT_FOUND", "File does not exist: $path", null)
                 return
             }
 
-            // Calculate crop hint (Centering)
-            val metrics = context.resources.displayMetrics
-            val screenWidth = metrics.widthPixels
-            val screenHeight = metrics.heightPixels
-            val bitmapWidth = bitmap.width
-            val bitmapHeight = bitmap.height
-
-            val screenAspect = screenWidth.toFloat() / screenHeight.toFloat()
-            val bitmapAspect = bitmapWidth.toFloat() / bitmapHeight.toFloat()
-
-            val cropRect: android.graphics.Rect
-            if (bitmapAspect > screenAspect) {
-                val newWidth = (bitmapHeight * screenAspect).toInt()
-                val startX = (bitmapWidth - newWidth) / 2
-                cropRect = android.graphics.Rect(startX, 0, startX + newWidth, bitmapHeight)
-            } else {
-                val newHeight = (bitmapWidth / screenAspect).toInt()
-                val startY = (bitmapHeight - newHeight) / 2
-                cropRect = android.graphics.Rect(0, startY, bitmapWidth, startY + newHeight)
-            }
-
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
-                if (location == 1 || location == 3) {
-                    wm.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_SYSTEM)
-                }
-                if (location == 2 || location == 3) {
-                    wm.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_LOCK)
-                }
-            } else {
-                wm.setBitmap(bitmap)
-            }
+            val authority = "${context.packageName}.fileprovider"
+            val uri = androidx.core.content.FileProvider.getUriForFile(context, authority, file)
+            
+            val intent = Intent(Intent.ACTION_VIEW)
+            intent.setDataAndType(uri, "image/*")
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            
+            context.startActivity(intent)
             result.success(true)
         } catch (e: Exception) {
-            result.error("SET_ERROR", e.message, null)
+            result.error("OPEN_ERROR", e.localizedMessage ?: "Unknown error", null)
         }
+    }
+
+    private fun setStaticWallpaper(path: String, location: Int, result: Result) {
+        Thread {
+            try {
+                val wm = WallpaperManager.getInstance(context)
+                val bitmap = BitmapFactory.decodeFile(path)
+
+                if (bitmap == null) {
+                    result.error("DECODE_ERROR", "Failed to decode image", null)
+                    return@Thread
+                }
+
+                val metrics = context.resources.displayMetrics
+                val screenWidth = metrics.widthPixels
+                val screenHeight = metrics.heightPixels
+                val bitmapWidth = bitmap.width
+                val bitmapHeight = bitmap.height
+
+                val screenAspect = screenWidth.toFloat() / screenHeight.toFloat()
+                val bitmapAspect = bitmapWidth.toFloat() / bitmapHeight.toFloat()
+
+                val cropRect: Rect
+                if (bitmapAspect > screenAspect) {
+                    val newWidth = (bitmapHeight * screenAspect).toInt()
+                    val startX = (bitmapWidth - newWidth) / 2
+                    cropRect = Rect(startX, 0, startX + newWidth, bitmapHeight)
+                } else {
+                    val newHeight = (bitmapWidth / screenAspect).toInt()
+                    val startY = (bitmapHeight - newHeight) / 2
+                    cropRect = Rect(0, startY, bitmapWidth, startY + newHeight)
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    if (location == 1 || location == 3) {
+                        wm.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_SYSTEM)
+                    }
+                    if (location == 2 || location == 3) {
+                        wm.setBitmap(bitmap, cropRect, true, WallpaperManager.FLAG_LOCK)
+                    }
+                } else {
+                    wm.setBitmap(bitmap)
+                }
+                result.success("Success")
+            } catch (e: Exception) {
+                result.error("SET_ERROR", e.message, null)
+            }
+        }.start()
     }
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {

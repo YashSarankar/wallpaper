@@ -15,7 +15,9 @@ class TrendingTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final trendingWallpapers = ref.watch(trendingWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
-    final settings = ref.watch(settingsProvider);
+    final gridColumns = ref.watch(
+      settingsProvider.select((s) => s.gridColumns),
+    );
     final l10n = AppLocalizations.of(context)!;
 
     return CustomScrollView(
@@ -53,9 +55,9 @@ class TrendingTab extends ConsumerWidget {
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
             sliver: SliverMasonryGrid.count(
-              crossAxisCount: settings.gridColumns,
-              mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
-              crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+              crossAxisCount: gridColumns,
+              mainAxisSpacing: gridColumns == 2 ? 12 : 8,
+              crossAxisSpacing: gridColumns == 2 ? 12 : 8,
               itemBuilder: (context, index) {
                 return WallpaperCard(wallpaper: trendingWallpapers[index]);
               },

@@ -7,12 +7,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
-import 'package:async_wallpaper/async_wallpaper.dart';
 
 import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
-import '../providers/wallpaper_provider.dart';
+import '../../utils/wallpaper_helper.dart';
+import '../providers/favorites_provider.dart';
 
 import 'package:wallpaper/l10n/app_localizations.dart';
 
@@ -38,43 +39,42 @@ class _WallpaperPreviewScreenState
   bool _isSetting = false;
   double? _progress;
   bool _showPreviewUI = true;
-  VideoPlayerController? _videoController;
-  bool _isVideoInitialized = false;
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
-  static const backgroundPlatform = MethodChannel(
-    'com.amozea.wallpapers/wallpaper_background',
-  );
+
+  VideoPlayerController? _videoController;
+  bool _videoReady = false;
+
+  bool get _isLive =>
+      widget.localFile == null && widget.wallpaper?.type == 'animated';
 
   @override
   void initState() {
     super.initState();
-    // Hide status bar and navigation bar for a true full-screen preview
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
-    if (widget.wallpaper?.type == 'animated' &&
-        widget.wallpaper?.videoUrl != null) {
+    if (_isLive) {
       _initVideo();
     }
   }
 
-  void _initVideo() {
-    _videoController =
-        VideoPlayerController.networkUrl(Uri.parse(widget.wallpaper!.videoUrl!))
-          ..initialize().then((_) {
-            if (mounted) {
-              setState(() {
-                _isVideoInitialized = true;
-                _videoController?.setLooping(true);
-                _videoController?.setVolume(0); // Muted by default
-                _videoController?.play();
-              });
-            }
-          });
+  Future<void> _initVideo() async {
+    final controller = VideoPlayerController.networkUrl(
+      Uri.parse(widget.wallpaper!.videoUrl!),
+    );
+    _videoController = controller;
+    try {
+      await controller.initialize();
+      if (!mounted) return;
+      controller.setLooping(true);
+      controller.setVolume(0);
+      controller.play();
+      setState(() => _videoReady = true);
+    } catch (e) {
+      debugPrint('Video init error: $e');
+    }
   }
 
   @override
   void dispose() {
-    // Restore system UI appearance
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _videoController?.dispose();
     super.dispose();
@@ -90,7 +90,7 @@ class _WallpaperPreviewScreenState
         (m) => '${m[1]}w=5000',
       );
       url = url.replaceAllMapped(RegExp(r'([?&])q=\d+'), (m) => '${m[1]}q=100');
-      if (!url.contains('w=5000')) url += '&w=5000';
+      if (!url.contains('w=5000')) url = '$url&w=5000';
     }
     return url;
   }
@@ -155,68 +155,6 @@ class _WallpaperPreviewScreenState
     final l10n = AppLocalizations.of(context)!;
     setState(() => _isSetting = true);
     try {
-      if (widget.wallpaper?.type == 'animated' &&
-          widget.wallpaper?.videoUrl != null) {
-        // For live wallpaper, we skip our internal selection because
-        // Android opens its own system picker for Live Wallpapers anyway.
-        final file = await _downloadFile(widget.wallpaper!.videoUrl!);
-        if (file != null) {
-          try {
-            // Check if our live wallpaper is already active
-            bool isLiveActive = false;
-            try {
-              isLiveActive = await backgroundPlatform.invokeMethod(
-                'isLiveWallpaperActive',
-              );
-            } catch (e) {
-              debugPrint('Error checking if live wallpaper is active: $e');
-            }
-
-            if (isLiveActive) {
-              // Silent update!
-              await backgroundPlatform.invokeMethod(
-                'updateLiveWallpaperSilent',
-                {'path': file.path},
-              );
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
-              }
-            } else {
-              // Need to show the system preview
-              // Hide preview UI before opening system picker
-              setState(() => _showPreviewUI = false);
-
-              // 1. Prepare via plugin (used by some devices/versions)
-              try {
-                await AsyncWallpaper.setLiveWallpaper(filePath: file.path);
-              } catch (e) {
-                debugPrint('AsyncWallpaper error (ignoring): $e');
-              }
-
-              // 2. Launch via custom native picker for the return-to-app feature
-              await platform.invokeMethod('setLiveWallpaper', {
-                'path': file.path,
-              });
-
-              if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.wallpaperSet)));
-              }
-            }
-          } on PlatformException catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('${l10n.failedToSet}: ${e.message}')),
-              );
-            }
-          }
-        }
-        return;
-      }
-
       File? file;
       if (widget.localFile != null) {
         file = widget.localFile;
@@ -233,6 +171,9 @@ class _WallpaperPreviewScreenState
           });
 
           // Result is void so we assume success if no error
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLiveActiveCached', false);
+
           if (mounted) {
             ScaffoldMessenger.of(
               context,
@@ -333,7 +274,12 @@ class _WallpaperPreviewScreenState
   }
 
   Future<void> _shareWallpaper() async {
-    if (widget.localFile != null) return; // Already on device
+    if (widget.localFile != null) return;
+    if (_isLive) {
+      // For live wallpapers, share the video file
+      _downloadLiveVideo();
+      return;
+    }
     final l10n = AppLocalizations.of(context)!;
     final file = await _downloadFile(_highResUrl);
     if (file != null) {
@@ -344,6 +290,60 @@ class _WallpaperPreviewScreenState
       await Share.shareXFiles([
         XFile(pngFile.path, mimeType: 'image/png'),
       ], text: l10n.checkOutWallpaper);
+    }
+  }
+
+  Future<void> _downloadLiveVideo({bool apply = false}) async {
+    if (apply) {
+      await WallpaperHelper.setLiveWallpaper(context, widget.wallpaper!, ref);
+      return;
+    }
+
+    final videoUrl = widget.wallpaper?.videoUrl;
+    if (videoUrl == null || videoUrl.isEmpty) return;
+    if (_progress != null) return;
+
+    setState(() => _progress = 0.01);
+    try {
+      final file = await _downloadFile(videoUrl);
+      if (file != null && mounted) {
+        String savePath;
+        if (Platform.isAndroid) {
+          final directory = Directory('/storage/emulated/0/Download');
+          if (!await directory.exists()) {
+            await directory.create(recursive: true);
+          }
+          final ext = videoUrl.split('.').last.split('?').first;
+          final fileName =
+              'LiveWallpaper_${widget.wallpaper!.id}_${DateTime.now().millisecondsSinceEpoch}.${ext.isNotEmpty ? ext : 'mp4'}';
+          savePath = '${directory.path}/$fileName';
+        } else {
+          final appDir = await getApplicationDocumentsDirectory();
+          savePath = '${appDir.path}/${videoUrl.split('/').last}';
+        }
+
+        await file.copy(savePath);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Video saved to Downloads!'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+          await Future.delayed(const Duration(milliseconds: 600));
+          try {
+            await platform.invokeMethod('openFile', {'path': savePath});
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Download error: $e')));
+    } finally {
+      if (mounted) setState(() => _progress = null);
     }
   }
 
@@ -443,37 +443,38 @@ class _WallpaperPreviewScreenState
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // Background Image with Zoom
+            // Background: video for live wallpapers, image for static
             Positioned.fill(
-              child: InteractiveViewer(
-                minScale: 1.0,
-                maxScale: 3.0,
-                boundaryMargin: EdgeInsets.zero,
-                child: Hero(
-                  tag:
-                      widget.heroTag ??
-                      (isLocal
-                          ? 'local_${widget.localFile?.path}'
-                          : widget.wallpaper!.id),
-                  child: _isVideoInitialized && _videoController != null
-                      ? SizedBox.expand(
-                          child: FittedBox(
-                            fit: BoxFit.cover,
-                            child: SizedBox(
-                              width: _videoController!.value.size.width,
-                              height: _videoController!.value.size.height,
-                              child: VideoPlayer(_videoController!),
-                            ),
-                          ),
-                        )
-                      : UniversalImage(
+              child: _isLive && _videoReady && _videoController != null
+                  ? GestureDetector(
+                      onTap: () =>
+                          setState(() => _showPreviewUI = !_showPreviewUI),
+                      child: FittedBox(
+                        fit: BoxFit.cover,
+                        child: SizedBox(
+                          width: _videoController!.value.size.width,
+                          height: _videoController!.value.size.height,
+                          child: VideoPlayer(_videoController!),
+                        ),
+                      ),
+                    )
+                  : InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 3.0,
+                      boundaryMargin: EdgeInsets.zero,
+                      child: Hero(
+                        tag:
+                            widget.heroTag ??
+                            (widget.localFile != null
+                                ? 'local_${widget.localFile?.path}'
+                                : widget.wallpaper!.id),
+                        child: UniversalImage(
                           path: _highResUrl,
-                          thumbnailUrl: isLocal
+                          thumbnailUrl: widget.localFile != null
                               ? null
                               : (widget.wallpaper!.midUrl ??
                                     widget.wallpaper!.lowUrl),
-                          fit: BoxFit
-                              .cover, // Fill the screen to avoid blank spaces
+                          fit: BoxFit.cover,
                           borderRadius: 0,
                           cacheWidth: 2000,
                           alignment: Alignment.center,
@@ -485,15 +486,8 @@ class _WallpaperPreviewScreenState
                             ),
                           ),
                         ),
-                ),
-              ),
-            ),
-
-            // Tap to Toggle UI Overlay (Transparent layer)
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () => setState(() => _showPreviewUI = !_showPreviewUI),
-              ),
+                      ),
+                    ),
             ),
 
             // Top Header (Back & Share)
@@ -601,7 +595,7 @@ class _WallpaperPreviewScreenState
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (!isLocal)
+                          if (!isLocal && !_isLive)
                             _buildActionIcon(
                               icon: CupertinoIcons.cloud_download,
                               onTap: _progress != null
@@ -609,30 +603,41 @@ class _WallpaperPreviewScreenState
                                   : _downloadWallpaper,
                               isLoading: _progress != null,
                             ),
-                          if (!isLocal) const SizedBox(width: 4),
-                          if (widget.wallpaper?.type != 'animated')
-                            _buildSetAction(l10n),
-                          if (widget.wallpaper?.type != 'animated' && !isLocal)
+                          if (!isLocal && !_isLive) const SizedBox(width: 4),
+                          if (!_isLive) _buildSetAction(l10n),
+                          if (!isLocal && !_isLive) const SizedBox(width: 4),
+                          if (!_isLive)
+                            _buildActionIcon(
+                              icon: isFav
+                                  ? CupertinoIcons.heart_fill
+                                  : CupertinoIcons.heart,
+                              activeColor: Colors.redAccent,
+                              isActive: isFav,
+                              onTap: () {
+                                if (isLocal) {
+                                  ref
+                                      .read(favoritesProvider.notifier)
+                                      .toggleLocalFavorite(widget.localFile!);
+                                } else {
+                                  ref
+                                      .read(favoritesProvider.notifier)
+                                      .toggleFavorite(widget.wallpaper!);
+                                }
+                                HapticFeedback.mediumImpact();
+                              },
+                            ),
+                          // Live wallpaper: show download video button
+                          if (_isLive) ...[
+                            _buildActionIcon(
+                              icon: CupertinoIcons.cloud_download,
+                              onTap: _progress != null
+                                  ? null
+                                  : () => _downloadLiveVideo(apply: false),
+                              isLoading: _progress != null,
+                            ),
                             const SizedBox(width: 4),
-                          _buildActionIcon(
-                            icon: isFav
-                                ? CupertinoIcons.heart_fill
-                                : CupertinoIcons.heart,
-                            activeColor: Colors.redAccent,
-                            isActive: isFav,
-                            onTap: () {
-                              if (isLocal) {
-                                ref
-                                    .read(favoritesProvider.notifier)
-                                    .toggleLocalFavorite(widget.localFile!);
-                              } else {
-                                ref
-                                    .read(favoritesProvider.notifier)
-                                    .toggleFavorite(widget.wallpaper!);
-                              }
-                              HapticFeedback.mediumImpact();
-                            },
-                          ),
+                            _buildLiveSetAction(),
+                          ],
                         ],
                       ),
                     ),
@@ -738,12 +743,8 @@ class _WallpaperPreviewScreenState
   }
 
   Widget _buildSetAction(AppLocalizations l10n) {
-    final isAnimated = widget.wallpaper?.type == 'animated';
-
     return GestureDetector(
-      onTap: _isSetting
-          ? null
-          : (isAnimated ? () => _setWallpaper(3) : _showSetWallpaperOptions),
+      onTap: _isSetting ? null : _showSetWallpaperOptions,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 24),
         height: 54,
@@ -769,13 +770,65 @@ class _WallpaperPreviewScreenState
                   ),
                 )
               : Text(
-                  isAnimated ? l10n.live.toUpperCase() : l10n.apply,
+                  l10n.apply,
                   style: const TextStyle(
                     color: Colors.black,
                     fontWeight: FontWeight.w900,
                     fontSize: 14,
                     letterSpacing: 1.2,
                   ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLiveSetAction() {
+    return GestureDetector(
+      onTap: _progress != null ? null : () => _downloadLiveVideo(apply: true),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        height: 54,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(27),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Center(
+          child: _progress != null
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.black,
+                  ),
+                )
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      CupertinoIcons.play_circle_fill,
+                      color: Colors.blueAccent,
+                      size: 18,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'SET LIVE',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
                 ),
         ),
       ),

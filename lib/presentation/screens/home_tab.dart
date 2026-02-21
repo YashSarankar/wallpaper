@@ -17,163 +17,107 @@ class HomeTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedSubTab = ref.watch(homeSubTabProvider);
-    final randomWallpapers = ref.watch(randomWallpapersProvider);
-    final latestWallpapers = ref.watch(latestWallpapersProvider);
-    final liveWallpapers = ref.watch(liveWallpapersProvider);
+    final displayedWallpapers = selectedSubTab == 0
+        ? ref.watch(randomWallpapersProvider)
+        : selectedSubTab == 1
+        ? ref.watch(latestWallpapersProvider)
+        : ref.watch(liveWallpapersProvider);
     final isDarkMode = ref.watch(themeProvider);
-    final settings = ref.watch(settingsProvider);
-    final color = isDarkMode ? Colors.white : Colors.black;
+    final gridColumns = ref.watch(
+      settingsProvider.select((s) => s.gridColumns),
+    );
     final wallpapersAsync = ref.watch(wallpapersProvider);
     final l10n = AppLocalizations.of(context)!;
 
-    final displayedWallpapers = selectedSubTab == 2
-        ? liveWallpapers
-        : (selectedSubTab == 0 ? randomWallpapers : latestWallpapers);
+    return Column(
+      children: [
+        // Top Gap for Custom AppBar
+        SizedBox(height: MediaQuery.of(context).padding.top + 70),
 
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
-        ),
-        // Premium Sub-Tab Selector
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
-            ), // Reduced from 20/10
-            child: Container(
-              height: 44, // Reduced from 50
-              decoration: BoxDecoration(
-                color: isDarkMode ? Colors.white10 : Colors.grey[200],
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Stack(
-                children: [
-                  // Sliding Indicator
-                  AnimatedAlign(
-                    duration: const Duration(milliseconds: 250),
-                    curve: Curves.easeInOutCubic,
-                    alignment: selectedSubTab == 0
-                        ? Alignment.centerLeft
-                        : (selectedSubTab == 1
-                              ? Alignment.center
-                              : Alignment.centerRight),
-                    child: FractionallySizedBox(
-                      widthFactor: 1 / 3,
-                      child: Container(
-                        margin: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: isDarkMode ? Colors.white24 : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            if (!isDarkMode)
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                          ],
-                        ),
+        // Premium Sub-Tab Selector (Fixed at top)
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            height: 44,
+            decoration: BoxDecoration(
+              color: isDarkMode ? Colors.white10 : Colors.grey[200],
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Stack(
+              children: [
+                // Sliding Indicator
+                AnimatedAlign(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeInOutCubic,
+                  alignment: selectedSubTab == 0
+                      ? Alignment.centerLeft
+                      : selectedSubTab == 1
+                      ? Alignment.center
+                      : Alignment.centerRight,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / 3,
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: isDarkMode ? Colors.white24 : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          if (!isDarkMode)
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                        ],
                       ),
                     ),
                   ),
-                  // Tab Buttons
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSubNavItem(
-                          ref,
-                          l10n.random,
-                          0,
-                          isDarkMode,
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildSubNavItem(
-                          ref,
-                          l10n.latest,
-                          1,
-                          isDarkMode,
-                        ),
-                      ),
-                      Expanded(
-                        child: _buildSubNavItem(ref, l10n.live, 2, isDarkMode),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+                // Tab Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildSubNavItem(ref, l10n.random, 0, isDarkMode),
+                    ),
+                    Expanded(
+                      child: _buildSubNavItem(ref, l10n.latest, 1, isDarkMode),
+                    ),
+                    Expanded(
+                      child: _buildSubNavItem(ref, l10n.live, 2, isDarkMode),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
 
-        wallpapersAsync.when(
-          data: (categories) {
-            if (displayedWallpapers.isEmpty) {
-              return SliverFillRemaining(
-                child: Center(child: Text(l10n.noWallpapersFound)),
-              );
-            }
-            return SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
-              sliver: SliverMasonryGrid.count(
-                crossAxisCount: settings.gridColumns,
-                mainAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
-                crossAxisSpacing: settings.gridColumns == 2 ? 12 : 8,
+        // Grid Content
+        Expanded(
+          child: wallpapersAsync.maybeWhen(
+            data: (categories) {
+              if (displayedWallpapers.isEmpty) {
+                return Center(child: Text(l10n.noWallpapersFound));
+              }
+              return MasonryGridView.count(
+                padding: const EdgeInsets.fromLTRB(16, 5, 16, 110),
+                physics: const BouncingScrollPhysics(),
+                crossAxisCount: gridColumns,
+                mainAxisSpacing: gridColumns == 2 ? 12 : 8,
+                crossAxisSpacing: gridColumns == 2 ? 12 : 8,
+                itemCount: displayedWallpapers.length,
                 itemBuilder: (context, index) {
                   return WallpaperCard(wallpaper: displayedWallpapers[index]);
                 },
-                childCount: displayedWallpapers.length,
-              ),
-            );
-          },
-          loading: () => const SliverFillRemaining(
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (err, stack) => SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.wifi_exclamationmark,
-                    size: 60,
-                    color: color.withOpacity(0.3),
+              );
+            },
+            orElse: () => isDarkMode
+                ? const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  )
+                : const Center(
+                    child: CircularProgressIndicator(color: Colors.black),
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.serverSleeping,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: color.withOpacity(0.5),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  CupertinoButton(
-                    color: color,
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    borderRadius: BorderRadius.circular(100),
-                    child: Text(
-                      l10n.wakeUp,
-                      style: TextStyle(
-                        color: isDarkMode ? Colors.black : Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13,
-                      ),
-                    ),
-                    onPressed: () {
-                      ref.invalidate(wallpapersProvider);
-                      HapticFeedback.mediumImpact();
-                    },
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
       ],
@@ -193,7 +137,7 @@ class HomeTab extends ConsumerWidget {
       onTap: () {
         if (!isSelected) {
           ref.read(homeSubTabProvider.notifier).state = index;
-          HapticFeedback.lightImpact(); // Added haptic feel
+          HapticFeedback.lightImpact();
         }
       },
       behavior: HitTestBehavior.opaque,

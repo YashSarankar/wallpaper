@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/wallpaper_provider.dart';
+import '../providers/favorites_provider.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import '../../core/constants/app_constants.dart';
