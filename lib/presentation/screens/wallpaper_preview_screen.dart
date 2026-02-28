@@ -472,19 +472,16 @@ class _WallpaperPreviewScreenState
                           path: _highResUrl,
                           thumbnailUrl: widget.localFile != null
                               ? null
-                              : (widget.wallpaper!.midUrl ??
-                                    widget.wallpaper!.lowUrl),
+                              : widget.wallpaper!.midUrl,
+                          lowThumbnailUrl: widget.localFile != null
+                              ? null
+                              : widget.wallpaper!.lowUrl,
+                          blurHash: widget.localFile != null
+                              ? null
+                              : widget.wallpaper!.blurHash,
                           fit: BoxFit.cover,
                           borderRadius: 0,
                           cacheWidth: 2000,
-                          alignment: Alignment.center,
-                          errorWidget: const Center(
-                            child: Icon(
-                              CupertinoIcons.exclamationmark_circle,
-                              color: Colors.white24,
-                              size: 40,
-                            ),
-                          ),
                         ),
                       ),
                     ),

@@ -158,6 +158,8 @@ class _CategoryItemState extends State<_CategoryItem> {
                     path:
                         widget.category.wallpapers.first.midUrl ??
                         widget.category.wallpapers.first.url,
+                    thumbnailUrl: widget.category.wallpapers.first.lowUrl,
+                    lowThumbnailUrl: null,
                     fit: BoxFit.cover,
                   )
                 else

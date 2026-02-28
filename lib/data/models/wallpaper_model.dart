@@ -19,6 +19,9 @@ class WallpaperModel extends Equatable {
   @HiveField(6)
   final String? videoUrl;
 
+  @HiveField(7)
+  final String? blurHash;
+
   const WallpaperModel({
     required this.id,
     required this.type,
@@ -27,6 +30,7 @@ class WallpaperModel extends Equatable {
     this.midUrl,
     this.lowUrl,
     this.videoUrl,
+    this.blurHash,
   });
 
   factory WallpaperModel.fromJson(
@@ -57,10 +61,11 @@ class WallpaperModel extends Equatable {
       id: id,
       type: json['type'] ?? 'static',
       url: original,
-      category: json['category'] ?? categoryName, // Backend provides category
+      category: json['category'] ?? categoryName,
       midUrl: mid,
       lowUrl: low,
       videoUrl: json['videoUrl'],
+      blurHash: json['imageUrl'] is Map ? json['imageUrl']['blurHash'] : null,
     );
   }
 
@@ -73,6 +78,7 @@ class WallpaperModel extends Equatable {
       'midUrl': midUrl,
       'lowUrl': lowUrl,
       'videoUrl': videoUrl,
+      'blurHash': blurHash,
     };
   }
 
@@ -84,6 +90,7 @@ class WallpaperModel extends Equatable {
     String? midUrl,
     String? lowUrl,
     String? videoUrl,
+    String? blurHash,
   }) {
     return WallpaperModel(
       id: id ?? this.id,
@@ -93,6 +100,7 @@ class WallpaperModel extends Equatable {
       midUrl: midUrl ?? this.midUrl,
       lowUrl: lowUrl ?? this.lowUrl,
       videoUrl: videoUrl ?? this.videoUrl,
+      blurHash: blurHash ?? this.blurHash,
     );
   }
 
@@ -105,6 +113,7 @@ class WallpaperModel extends Equatable {
     midUrl,
     lowUrl,
     videoUrl,
+    blurHash,
   ];
 }
 
@@ -126,13 +135,14 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       midUrl: fields[4] as String?,
       lowUrl: fields[5] as String?,
       videoUrl: fields[6] as String?,
+      blurHash: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, WallpaperModel obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -146,7 +156,9 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       ..writeByte(5)
       ..write(obj.lowUrl)
       ..writeByte(6)
-      ..write(obj.videoUrl);
+      ..write(obj.videoUrl)
+      ..writeByte(7)
+      ..write(obj.blurHash);
   }
 
   @override

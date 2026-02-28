@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../data/models/wallpaper_model.dart';
-import '../providers/settings_provider.dart';
 import '../providers/favorites_provider.dart';
 import '../screens/wallpaper_preview_screen.dart';
 import '../../utils/wallpaper_helper.dart';
@@ -66,7 +65,6 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
   Widget build(BuildContext context) {
     final favorites = ref.watch(favoritesProvider);
     final isFav = favorites.any((w) => w.id == widget.wallpaper.id);
-    final dataSaver = ref.watch(settingsProvider.select((s) => s.dataSaver));
     final isLive = _isLive;
 
     return GestureDetector(
@@ -135,12 +133,10 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
                           ),
                         )
                       : UniversalImage(
-                          path: dataSaver
-                              ? (widget.wallpaper.lowUrl ??
-                                    widget.wallpaper.url)
-                              : (widget.wallpaper.midUrl ??
-                                    widget.wallpaper.url),
+                          path: widget.wallpaper.midUrl ?? widget.wallpaper.url,
                           thumbnailUrl: widget.wallpaper.lowUrl,
+                          lowThumbnailUrl: null,
+                          blurHash: widget.wallpaper.blurHash,
                           fit: BoxFit.cover,
                           borderRadius: 28,
                           cacheWidth: 400,

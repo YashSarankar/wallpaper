@@ -77,7 +77,12 @@ router.post('/', auth, wallpaperUpload, async (req, res) => {
         const newWallpaper = new Wallpaper({
             title,
             category,
-            imageUrl,
+            imageUrl: {
+                original: imageUrl.original || imageUrl,
+                mid: imageUrl.mid || imageUrl,
+                low: imageUrl.low || imageUrl,
+                blurHash: imageUrl.blurHash || null,
+            },
             type: type || 'static',
             videoUrl
         });

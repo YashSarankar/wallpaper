@@ -29,6 +29,29 @@ const uploadBuffer = (buffer, filename, contentType = 'image/jpeg') => {
     });
 };
 
+/**
+ * Generates a BlurHash string from an image buffer.
+ * Uses a tiny 32x32 intermediate to keep encode time under 10ms even on CPU.
+ */
+const generateBlurHash = async (fileBuffer) => {
+    try {
+        const { encode } = require('blurhash');
+        // Downscale to tiny size for fast encoding
+        const { data, info } = await sharp(fileBuffer)
+            .resize(32, 32, { fit: 'inside' })
+            .ensureAlpha()
+            .raw()
+            .toBuffer({ resolveWithObject: true });
+
+        // Components: 4x3 is the sweet spot (Instagram uses this)
+        const hash = encode(new Uint8ClampedArray(data), info.width, info.height, 4, 3);
+        return hash;
+    } catch (e) {
+        console.error('BlurHash generation failed:', e.message);
+        return null;
+    }
+};
+
 exports.processAndUploadImage = async (fileBuffer, originalName) => {
     const timestamp = Date.now();
     const cleanName = path.parse(originalName).name.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9_]/g, '');
@@ -56,6 +79,9 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
         .toBuffer();
     const lowPath = `wallpapers/low/${baseName}.jpg`;
 
+    // 4. Generate BlurHash from the original (tiny encode, fast)
+    const blurHash = await generateBlurHash(fileBuffer);
+
     // Parallel upload
     const [original, mid, low] = await Promise.all([
         uploadBuffer(originalBuffer, originalPath, 'image/jpeg'),
@@ -63,7 +89,7 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
         uploadBuffer(lowBuffer, lowPath, 'image/jpeg')
     ]);
 
-    return { original, mid, low };
+    return { original, mid, low, blurHash };
 };
 
 exports.uploadVideo = async (fileBuffer, originalName, mimetype) => {

@@ -22,6 +22,9 @@ const WallpaperSchema = new mongoose.Schema({
         low: {
             type: String,
             required: true,
+        },
+        blurHash: {
+            type: String,
         }
     },
     type: {
