@@ -15,11 +15,13 @@ class WallpaperModel extends Equatable {
   final String? midUrl;
   @HiveField(5)
   final String? lowUrl;
-
   @HiveField(6)
-  final String? videoUrl;
+  final String? highUrl;
 
   @HiveField(7)
+  final String? videoUrl;
+
+  @HiveField(8)
   final String? blurHash;
 
   const WallpaperModel({
@@ -29,6 +31,7 @@ class WallpaperModel extends Equatable {
     required this.category,
     this.midUrl,
     this.lowUrl,
+    this.highUrl,
     this.videoUrl,
     this.blurHash,
   });
@@ -37,14 +40,15 @@ class WallpaperModel extends Equatable {
     Map<String, dynamic> json,
     String categoryName,
   ) {
-    // Backend returns imageUrl: { original, mid, low }
-    // Legacy might be just 'url'
+    // Backend returns imageUrl: { original, high, mid, low }
     String original = '';
+    String? high;
     String? mid;
     String? low;
 
     if (json['imageUrl'] != null && json['imageUrl'] is Map) {
       original = json['imageUrl']['original'] ?? '';
+      high = json['imageUrl']['high'];
       mid = json['imageUrl']['mid'];
       low = json['imageUrl']['low'];
     } else {
@@ -62,6 +66,7 @@ class WallpaperModel extends Equatable {
       type: json['type'] ?? 'static',
       url: original,
       category: json['category'] ?? categoryName,
+      highUrl: high,
       midUrl: mid,
       lowUrl: low,
       videoUrl: json['videoUrl'],
@@ -75,6 +80,7 @@ class WallpaperModel extends Equatable {
       'type': type,
       'url': url,
       'category': category,
+      'highUrl': highUrl,
       'midUrl': midUrl,
       'lowUrl': lowUrl,
       'videoUrl': videoUrl,
@@ -87,6 +93,7 @@ class WallpaperModel extends Equatable {
     String? type,
     String? url,
     String? category,
+    String? highUrl,
     String? midUrl,
     String? lowUrl,
     String? videoUrl,
@@ -97,6 +104,7 @@ class WallpaperModel extends Equatable {
       type: type ?? this.type,
       url: url ?? this.url,
       category: category ?? this.category,
+      highUrl: highUrl ?? this.highUrl,
       midUrl: midUrl ?? this.midUrl,
       lowUrl: lowUrl ?? this.lowUrl,
       videoUrl: videoUrl ?? this.videoUrl,
@@ -110,6 +118,7 @@ class WallpaperModel extends Equatable {
     type,
     url,
     category,
+    highUrl,
     midUrl,
     lowUrl,
     videoUrl,
@@ -134,15 +143,16 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       category: fields[3] as String,
       midUrl: fields[4] as String?,
       lowUrl: fields[5] as String?,
-      videoUrl: fields[6] as String?,
-      blurHash: fields[7] as String?,
+      highUrl: fields[6] as String?,
+      videoUrl: fields[7] as String?,
+      blurHash: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, WallpaperModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -156,8 +166,10 @@ class WallpaperModelAdapter extends TypeAdapter<WallpaperModel> {
       ..writeByte(5)
       ..write(obj.lowUrl)
       ..writeByte(6)
-      ..write(obj.videoUrl)
+      ..write(obj.highUrl)
       ..writeByte(7)
+      ..write(obj.videoUrl)
+      ..writeByte(8)
       ..write(obj.blurHash);
   }
 

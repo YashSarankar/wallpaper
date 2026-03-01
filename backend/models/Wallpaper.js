@@ -15,6 +15,9 @@ const WallpaperSchema = new mongoose.Schema({
             type: String,
             required: true,
         },
+        high: {
+            type: String,
+        },
         mid: {
             type: String,
             required: true,

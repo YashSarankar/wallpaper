@@ -1,0 +1,12 @@
+[dotenv@17.2.3] injecting env (4) from ..\.env -- tip: ???? add secrets lifecycle management: https://dotenvx.com/ops
+Wallpapers per category:
+- Abstract: 18
+- Anime: 5
+- Cars & Bike: 3
+- Fitness: 1
+- Movies: 4
+- Nature: 2
+- Stock: 1
+- Superhero: 1
+- Text: 3
+- Trending: 2

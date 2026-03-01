@@ -7,6 +7,7 @@ import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import 'home_screen.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
+import '../../data/models/wallpaper_model.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -31,7 +32,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _mainController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1500),
     );
 
     _driftController = AnimationController(
@@ -76,8 +77,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _mainController.forward();
 
     // Fallback safety: If for some reason Lottie fails to signal completion,
-    // navigate anyway after 6 seconds to prevent being stuck.
-    Future.delayed(const Duration(seconds: 6), () {
+    // navigate anyway after 3 seconds to prevent being stuck.
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) _navigateToHome();
     });
   }
@@ -192,32 +193,35 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                 width: 200,
                                 height: 200,
                                 onLoaded: (composition) async {
-                                  _lottieController.duration =
-                                      composition.duration;
-                                  // Wait for the animation to finish
-                                  await _lottieController.forward();
+                                  _lottieController.duration = const Duration(
+                                    milliseconds: 1200,
+                                  );
 
-                                  // Wait for settings to be loaded first
-                                  await ref
-                                      .read(settingsProvider.notifier)
-                                      .stream
-                                      .firstWhere((s) => s.isInitialized)
-                                      .timeout(
-                                        const Duration(seconds: 2),
-                                        onTimeout: () =>
-                                            ref.read(settingsProvider),
-                                      );
+                                  // Parallelize all startup tasks: Animation, Settings, and Data fetching
+                                  await Future.wait<dynamic>([
+                                    _lottieController.forward(),
 
-                                  // After animation and settings, wait for data if it's not ready yet
-                                  try {
-                                    await ref
+                                    // Check if settings are ready or wait for them
+                                    ref.read(settingsProvider).isInitialized
+                                        ? Future.value(true)
+                                        : ref
+                                              .read(settingsProvider.notifier)
+                                              .stream
+                                              .firstWhere(
+                                                (s) => s.isInitialized,
+                                              )
+                                              .timeout(
+                                                const Duration(seconds: 2),
+                                                onTimeout: () =>
+                                                    ref.read(settingsProvider),
+                                              ),
+
+                                    // Pre-fetch wallpapers in parallel
+                                    ref
                                         .read(wallpapersProvider.future)
-                                        .timeout(const Duration(seconds: 3));
-                                  } catch (e) {
-                                    debugPrint(
-                                      'Splash timed out waiting for data: $e',
-                                    );
-                                  }
+                                        .timeout(const Duration(seconds: 3))
+                                        .catchError((_) => <CategoryModel>[]),
+                                  ]);
 
                                   _navigateToHome();
                                 },

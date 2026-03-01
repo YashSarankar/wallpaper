@@ -3,12 +3,14 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_blurhash/flutter_blurhash.dart';
 
 import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
@@ -44,6 +46,9 @@ class _WallpaperPreviewScreenState
   VideoPlayerController? _videoController;
   bool _videoReady = false;
 
+  // Progressive image loading stages
+  bool _showOriginal = false;
+
   bool get _isLive =>
       widget.localFile == null && widget.wallpaper?.type == 'animated';
 
@@ -53,6 +58,23 @@ class _WallpaperPreviewScreenState
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     if (_isLive) {
       _initVideo();
+    } else {
+      // 🔥 GOLD STANDARD: Pre-cache the high-res image immediately so the fade-in
+      // from Medium to High-Res is as instantaneous as possible.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          precacheImage(
+            CachedNetworkImageProvider(
+              _highResUrl,
+              maxWidth:
+                  (MediaQuery.of(context).size.width *
+                          MediaQuery.of(context).devicePixelRatio)
+                      .toInt(),
+            ),
+            context,
+          );
+        }
+      });
     }
   }
 
@@ -82,7 +104,11 @@ class _WallpaperPreviewScreenState
 
   String get _highResUrl {
     if (widget.localFile != null) return widget.localFile!.path;
-    String url = widget.wallpaper!.url;
+
+    // Preferred order for mobile preview: 1440p Optimized (High) -> Original 4K
+    // This saves bandwidth/GPU while remaining pin-sharp on nearly all phones.
+    String url = widget.wallpaper!.highUrl ?? widget.wallpaper!.url;
+
     if (url.contains('unsplash.com')) {
       // Use much higher resolution for preview/zoom (up to 5K)
       url = url.replaceAllMapped(
@@ -338,10 +364,11 @@ class _WallpaperPreviewScreenState
         }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Download error: $e')));
+      }
     } finally {
       if (mounted) setState(() => _progress = null);
     }
@@ -468,21 +495,113 @@ class _WallpaperPreviewScreenState
                             (widget.localFile != null
                                 ? 'local_${widget.localFile?.path}'
                                 : widget.wallpaper!.id),
-                        child: UniversalImage(
-                          path: _highResUrl,
-                          thumbnailUrl: widget.localFile != null
-                              ? null
-                              : widget.wallpaper!.midUrl,
-                          lowThumbnailUrl: widget.localFile != null
-                              ? null
-                              : widget.wallpaper!.lowUrl,
-                          blurHash: widget.localFile != null
-                              ? null
-                              : widget.wallpaper!.blurHash,
-                          fit: BoxFit.cover,
-                          borderRadius: 0,
-                          cacheWidth: 2000,
-                        ),
+                        child: widget.localFile != null
+                            ? UniversalImage(
+                                path: _highResUrl,
+                                fit: BoxFit.cover,
+                                borderRadius: 0,
+                              )
+                            // ── WhatsApp-style 3-layer progressive preview ──
+                            : RepaintBoundary(
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    // Layer 1: BlurHash — renders on Frame 0 from a tiny
+                                    // string in JSON. Zero network. Zero delay.
+                                    if (widget.wallpaper!.blurHash != null)
+                                      SizedBox.expand(
+                                        child: BlurHash(
+                                          hash: widget.wallpaper!.blurHash!,
+                                        ),
+                                      )
+                                    else
+                                      const ColoredBox(color: Colors.black12),
+
+                                    // Layer 2: Medium — Static layer (no animation to prevent dual 4K repaint tearing).
+                                    // It is typically instantly loaded from the grid precache anyway.
+                                    if (widget.wallpaper!.midUrl != null)
+                                      Image(
+                                        image: CachedNetworkImageProvider(
+                                          widget.wallpaper!.midUrl!,
+                                        ),
+                                        fit: BoxFit.cover,
+                                        filterQuality: FilterQuality.high,
+                                        isAntiAlias:
+                                            true, // Prevent pixel jaggedness during scale
+                                      ),
+
+                                    // Layer 3: Original — fades in when natively rendered
+                                    AnimatedOpacity(
+                                      opacity: _showOriginal ? 1.0 : 0.0,
+                                      duration: const Duration(
+                                        milliseconds:
+                                            400, // Slightly longer fade for premium feel
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                      child: SizedBox.expand(
+                                        child: Image(
+                                          image: CachedNetworkImageProvider(
+                                            _highResUrl,
+                                            // Decode strictly at device exact pixel width to prevent GPU tear
+                                            maxWidth:
+                                                (MediaQuery.of(
+                                                          context,
+                                                        ).size.width *
+                                                        MediaQuery.of(
+                                                          context,
+                                                        ).devicePixelRatio)
+                                                    .toInt(),
+                                          ),
+                                          fit: BoxFit.cover,
+                                          filterQuality: FilterQuality.high,
+                                          isAntiAlias: true,
+                                          frameBuilder:
+                                              (
+                                                context,
+                                                child,
+                                                frame,
+                                                wasSynchronouslyLoaded,
+                                              ) {
+                                                if (wasSynchronouslyLoaded) {
+                                                  if (!_showOriginal) {
+                                                    WidgetsBinding.instance
+                                                        .addPostFrameCallback((
+                                                          _,
+                                                        ) {
+                                                          if (mounted) {
+                                                            setState(
+                                                              () =>
+                                                                  _showOriginal =
+                                                                      true,
+                                                            );
+                                                          }
+                                                        });
+                                                  }
+                                                  return child;
+                                                }
+                                                if (frame != null &&
+                                                    !_showOriginal) {
+                                                  WidgetsBinding.instance
+                                                      .addPostFrameCallback((
+                                                        _,
+                                                      ) {
+                                                        if (mounted) {
+                                                          setState(
+                                                            () =>
+                                                                _showOriginal =
+                                                                    true,
+                                                          );
+                                                        }
+                                                      });
+                                                }
+                                                return child;
+                                              },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                       ),
                     ),
             ),

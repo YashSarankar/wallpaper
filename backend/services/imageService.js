@@ -59,37 +59,45 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
     // We will convert to JPEG for consistency
     const baseName = `${timestamp}-${cleanName}`;
 
-    // 1. Original (High Quality - 100% for 4K feel)
+    // 4K Original (High Quality - 100% for 4K feel)
     const originalBuffer = await sharp(fileBuffer)
         .jpeg({ quality: 100 })
         .toBuffer();
     const originalPath = `wallpapers/original/${baseName}.jpg`;
 
-    // 2. Mid (Medium Quality - e.g., for full screen mobile view but optimized)
+    // High (Optimized 1440p for high-end Android displays)
+    const highBuffer = await sharp(fileBuffer)
+        .resize({ width: 1440, withoutEnlargement: true })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+    const highPath = `wallpapers/high/${baseName}.jpg`;
+
+    // Mid (Medium Quality - e.g., for full screen mobile view but optimized)
     const midBuffer = await sharp(fileBuffer)
         .resize({ width: 1080, withoutEnlargement: true }) // Standard mobile width
         .jpeg({ quality: 75 })
         .toBuffer();
     const midPath = `wallpapers/mid/${baseName}.jpg`;
 
-    // 3. Low (Low Quality - e.g., for thumbnails)
+    // Low (Low Quality - e.g., for thumbnails)
     const lowBuffer = await sharp(fileBuffer)
         .resize({ width: 300, withoutEnlargement: true })
         .jpeg({ quality: 60 })
         .toBuffer();
     const lowPath = `wallpapers/low/${baseName}.jpg`;
 
-    // 4. Generate BlurHash from the original (tiny encode, fast)
+    // BlurHash from the original
     const blurHash = await generateBlurHash(fileBuffer);
 
     // Parallel upload
-    const [original, mid, low] = await Promise.all([
+    const [original, high, mid, low] = await Promise.all([
         uploadBuffer(originalBuffer, originalPath, 'image/jpeg'),
+        uploadBuffer(highBuffer, highPath, 'image/jpeg'),
         uploadBuffer(midBuffer, midPath, 'image/jpeg'),
         uploadBuffer(lowBuffer, lowPath, 'image/jpeg')
     ]);
 
-    return { original, mid, low, blurHash };
+    return { original, high, mid, low, blurHash };
 };
 
 exports.uploadVideo = async (fileBuffer, originalName, mimetype) => {

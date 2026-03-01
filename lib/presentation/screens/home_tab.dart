@@ -111,13 +111,7 @@ class HomeTab extends ConsumerWidget {
                 },
               );
             },
-            orElse: () => isDarkMode
-                ? const Center(
-                    child: CircularProgressIndicator(color: Colors.white),
-                  )
-                : const Center(
-                    child: CircularProgressIndicator(color: Colors.black),
-                  ),
+            orElse: () => const SizedBox.shrink(),
           ),
         ),
       ],

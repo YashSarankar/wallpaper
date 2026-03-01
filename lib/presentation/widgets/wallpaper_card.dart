@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:video_player/video_player.dart';
 
@@ -79,10 +80,21 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
 
         _isNavigating = true;
         final heroTag = '${widget.wallpaper.id}_${context.hashCode}';
+
+        // 🔥 Pre-warm the medium image into Flutter's image cache BEFORE opening
+        // the preview screen. If it's already cached from the grid, this is free.
+        // If not, it starts downloading immediately so preview feels instant.
+        if (widget.wallpaper.midUrl != null) {
+          precacheImage(
+            CachedNetworkImageProvider(widget.wallpaper.midUrl!),
+            context,
+          );
+        }
+
         Navigator.push(
           context,
           PageRouteBuilder(
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 400),
             pageBuilder: (context, animation, secondaryAnimation) =>
                 WallpaperPreviewScreen(
                   wallpaper: widget.wallpaper,

@@ -1,0 +1,16 @@
+[dotenv@17.2.3] injecting env (4) from ..\.env -- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }
+Total: 386 Static: 0 Null: 354
+Sample: {
+  imageUrl: {
+    original: 'https://storage.googleapis.com/my-wallpaper-app-bucket/wallpapers/original/1770051810028-n1.jpg',
+    mid: 'https://storage.googleapis.com/my-wallpaper-app-bucket/wallpapers/mid/1770051810028-n1.jpg',
+    low: 'https://storage.googleapis.com/my-wallpaper-app-bucket/wallpapers/low/1770051810028-n1.jpg',
+    blurHash: 'L85~wrEzq?m~F3.AR1R2%%MxoatQ'
+  },
+  type: 'static',
+  _id: new ObjectId('698105ce35c77212591ed226'),
+  title: 'n1',
+  category: 'Trending',
+  createdAt: 2026-02-02T20:15:10.219Z,
+  __v: 0
+}
