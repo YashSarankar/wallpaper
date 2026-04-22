@@ -94,25 +94,19 @@ class _UniversalImageState extends State<UniversalImage> {
       if (!mounted || _sequenceId != seqId) return;
 
       final url = _netLayers[i];
-      final provider = CachedNetworkImageProvider(
-        url,
-        maxWidth: widget.cacheWidth,
-      );
 
-      final completer = Completer<void>();
-      final stream = provider.resolve(ImageConfiguration.empty);
-      late ImageStreamListener listener;
-      listener = ImageStreamListener(
-        (_, __) {
-          if (!completer.isCompleted) completer.complete();
-        },
-        onError: (_, __) {
-          if (!completer.isCompleted) completer.complete();
-        },
-      );
-      stream.addListener(listener);
-      await completer.future;
-      stream.removeListener(listener);
+      try {
+        // Use precacheImage: the official, safe way to ensure an image is ready
+        // without manually touching raw ImageStream handles which can cause
+        // "Cannot clone a disposed image" errors.
+        await precacheImage(
+          CachedNetworkImageProvider(url, maxWidth: widget.cacheWidth),
+          context,
+        );
+      } catch (e) {
+        // Silence errors here; we'll handle them in the UI layer if needed.
+        // We want to continue to the next (likely higher-res) layer anyway.
+      }
 
       if (!mounted || _sequenceId != seqId) return;
 

@@ -4,38 +4,29 @@ const axios = require('axios');
 const path = require('path');
 const Wallpaper = require('../models/Wallpaper');
 const { processAndUploadImage } = require('../services/imageService');
+const { bucket } = require('../config/gcs');
 
 const abstractWallpapers = [
-    { title: 'Abstract 1', url: 'https://wallpaperaccess.com/full/1234567.jpg' },
-    { title: 'Abstract 2', url: 'https://images.unsplash.com/abstract-amoled-4k-dark.jpg' },
-    { title: 'Abstract 3', url: 'https://wallpapers.com/amoled-swirls-4k.jpg' },
-    { title: 'Abstract 4', url: 'https://hdqwalls.com/dark-abstract-8k.jpg' },
-    { title: 'Abstract 5', url: 'https://4kwallpapers.com/black-blue-4k-vertical.jpg' },
-    { title: 'Vibrant Geometric 1', url: 'https://wallpaperaccess.com/geometric-abstract-4k-android.jpg' },
-    { title: 'Vibrant Geometric 2', url: 'https://images.pexels.com/abstract-geo-8k-vertical.jpg' },
-    { title: 'Vibrant Geometric 3', url: 'https://wallpapers.com/color-metal-4k.jpg' },
-    { title: 'Vibrant Geometric 4', url: 'https://hdqwalls.com/red-blue-circuit-4k.jpg' },
-    { title: 'Vibrant Geometric 5', url: 'https://4kwallpapers.com/polygonal-abstract-5k.jpg' },
-    { title: 'Fluid 1', url: 'https://wallpaperaccess.com/fluid-art-4k.jpg' },
-    { title: 'Fluid 2', url: 'https://images.unsplash.com/blue-liquid-4k-mobile.jpg' },
-    { title: 'Fluid 3', url: 'https://wallpapers.com/purple-swirl-liquid-8k.jpg' },
-    { title: 'Fluid 4', url: 'https://hdqwalls.com/teal-fluid-waves-4k.jpg' },
-    { title: 'Fluid 5', url: 'https://4kwallpapers.com/metallic-waves-4k-android.jpg' },
-    { title: 'Neon 1', url: 'https://wallpaperaccess.com/neon-glow-4k-amoled.jpg' },
-    { title: 'Neon 2', url: 'https://images.pexels.com/rainbow-gradient-vertical-4k.jpg' },
-    { title: 'Neon 3', url: 'https://wallpapers.com/pink-amoled-swirls-4k.jpg' },
-    { title: 'Neon 4', url: 'https://hdqwalls.com/glossy-purple-4k.jpg' },
-    { title: 'Neon 5', url: 'https://4kwallpapers.com/neon-pink-circle-8k.jpg' },
-    { title: 'Colorful Paint 1', url: 'https://wallpaperaccess.com/paint-strands-4k.jpg' },
-    { title: 'Colorful Paint 2', url: 'https://images.unsplash.com/minimalist-gradient-4k-vertical.jpg' },
-    { title: 'Colorful Paint 3', url: 'https://wallpapers.com/vibrant-fluid-5k.jpg' },
-    { title: 'Colorful Paint 4', url: 'https://hdqwalls.com/colorful-waves-4k-android.jpg' },
-    { title: 'Colorful Paint 5', url: 'https://4kwallpapers.com/orange-streaks-4k.jpg' },
-    { title: 'Bonus 1', url: 'https://wallpaperaccess.com/glossy-abstract-4k.jpg' },
-    { title: 'Bonus 2', url: 'https://images.pexels.com/geometric-cubes-4k.jpg' },
-    { title: 'Bonus 3', url: 'https://wallpapers.com/blue-red-angular-4k.jpg' },
-    { title: 'Bonus 4', url: 'https://hdqwalls.com/colorful-shapes-gradient-4k.jpg' },
-    { title: 'Bonus 5', url: 'https://4kwallpapers.com/paint-shapes-8k-vertical.jpg' }
+    { "title": "Vibrant red and black pattern", "url": "https://images.pexels.com/photos/1493226/pexels-photo-1493226.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Abstract painting bold blue and orange", "url": "https://images.pexels.com/photos/1690351/pexels-photo-1690351.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Dynamic abstract acrylic painting", "url": "https://images.pexels.com/photos/2983141/pexels-photo-2983141.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Colorful abstract painting", "url": "https://images.pexels.com/photos/1149019/pexels-photo-1149019.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Black and white abstract curved lines", "url": "https://images.pexels.com/photos/3694708/pexels-photo-3694708.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Vibrant fluid acrylic paint", "url": "https://images.pexels.com/photos/1428169/pexels-photo-1428169.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Colorful paint swirls", "url": "https://images.pexels.com/photos/3109830/pexels-photo-3109830.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Orange stripes dark background", "url": "https://images.pexels.com/photos/925711/pexels-photo-925711.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Red and black swirls motion", "url": "https://images.pexels.com/photos/3045828/pexels-photo-3045828.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Pink green and blue modern art", "url": "https://images.pexels.com/photos/2887710/pexels-photo-2887710.jpeg?auto=compress&cs=tinysrgb&fit=crop&h=3840&w=2160" },
+    { "title": "Black background multicolored swirl", "url": "https://images.unsplash.com/photo-1664640458531-3c7cca2a9323?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "White wall wavy lines", "url": "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Sun sky daytime abstract", "url": "https://images.unsplash.com/photo-1604079628040-94301bb21b91?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Red and blue wallpaper", "url": "https://images.unsplash.com/photo-1567095761054-7a02e69e5c43?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Purple white and orange light", "url": "https://images.unsplash.com/photo-1604076913837-52ab5629fba9?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Abstract painting orange blue", "url": "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Multicolored abstract painting", "url": "https://images.unsplash.com/photo-1484589065579-248aad0d8b13?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Pink and green abstract art", "url": "https://images.unsplash.com/photo-1557672172-298e090bd0f1?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "White and black striped textile", "url": "https://images.unsplash.com/photo-1595411425732-e69c1abe2763?q=80&w=3840&auto=format&fit=crop" },
+    { "title": "Purple and green abstract background", "url": "https://images.unsplash.com/photo-1567359781514-3b964e2b04d6?q=80&w=3840&auto=format&fit=crop" }
 ];
 
 async function seedAbstract4K() {
@@ -45,6 +36,17 @@ async function seedAbstract4K() {
         console.log('Connected.');
 
         const category = 'Abstract';
+
+        console.log(`Clearing existing ${category} wallpapers to apply 4-layer optimization...`);
+        const existing = await Wallpaper.find({ category });
+        for (const doc of existing) {
+            const urlsToDelete = [doc.imageUrl.original, doc.imageUrl.high, doc.imageUrl.mid, doc.imageUrl.low].filter(Boolean);
+            for (const url of urlsToDelete) {
+                const filePath = url.split(process.env.GCS_BUCKET_NAME + '/')[1];
+                if (filePath) await bucket.file(filePath).delete().catch(() => { });
+            }
+            await Wallpaper.deleteOne({ _id: doc._id });
+        }
 
         for (const item of abstractWallpapers) {
             console.log(`Processing: ${item.title} from ${item.url}`);

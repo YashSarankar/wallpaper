@@ -65,10 +65,17 @@ exports.processAndUploadImage = async (fileBuffer, originalName) => {
         .toBuffer();
     const originalPath = `wallpapers/original/${baseName}.jpg`;
 
-    // High (Optimized 1440p for high-end Android displays)
+    // High (Optimized 1440p PORTRAIT CROP for modern high-end Android displays)
+    // This is the "Gold Standard" solution: by cropping to 20:9 on the server,
+    // we eliminate the need for the device to up-scale landscape-to-portrait.
     const highBuffer = await sharp(fileBuffer)
-        .resize({ width: 1440, withoutEnlargement: true })
-        .jpeg({ quality: 90 })
+        .resize({
+            width: 1440,
+            height: 3200,
+            fit: 'cover',
+            position: 'centre'
+        })
+        .jpeg({ quality: 95 })
         .toBuffer();
     const highPath = `wallpapers/high/${baseName}.jpg`;
 
