@@ -219,8 +219,8 @@ void main() async {
   // Initialize these in background without awaiting to speed up cold start
   Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
   
-  // Initialize Ads and start preloading
-  await MobileAds.instance.initialize();
+  // Initialize Ads and start preloading in background
+  MobileAds.instance.initialize();
   final container = ProviderContainer();
   container.read(adManagerProvider).init();
 

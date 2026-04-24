@@ -12,22 +12,41 @@ class BannerAdWidget extends StatefulWidget {
 class _BannerAdWidgetState extends State<BannerAdWidget> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  AdSize? _adSize;
 
   @override
-  void initState() {
-    super.initState();
-    _loadAd();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Load ad once we have the context needed for adaptive size
+    if (!_isLoaded && _bannerAd == null) {
+      _loadAd();
+    }
   }
 
-  void _loadAd() {
+  Future<void> _loadAd() async {
+    // 🔥 PRODUCTION FIX: Standard banners often fail to fill on modern screens.
+    // Adaptive banners request the best-fitting ad for the device width.
+    final AnchoredAdaptiveBannerAdSize? size =
+        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(
+          MediaQuery.of(context).size.width.truncate(),
+        );
+
+    if (size == null) return;
+
     _bannerAd = BannerAd(
       adUnitId: AdConfig.bannerAdUnitId,
       request: const AdRequest(),
-      size: AdSize.banner,
+      size: size,
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          if (!mounted) {
+            ad.dispose();
+            return;
+          }
           setState(() {
+            _bannerAd = ad as BannerAd;
             _isLoaded = true;
+            _adSize = size;
           });
         },
         onAdFailedToLoad: (ad, error) {
@@ -46,11 +65,11 @@ class _BannerAdWidgetState extends State<BannerAdWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoaded && _bannerAd != null) {
+    if (_isLoaded && _bannerAd != null && _adSize != null) {
       return Container(
         alignment: Alignment.center,
-        width: _bannerAd!.size.width.toDouble(),
-        height: _bannerAd!.size.height.toDouble(),
+        width: _adSize!.width.toDouble(),
+        height: _adSize!.height.toDouble(),
         child: AdWidget(ad: _bannerAd!),
       );
     }

@@ -40,9 +40,12 @@ class AdManager {
           debugPrint('InterstitialAd failed to load: $error');
           _interstitialLoadAttempts++;
           _interstitialAd = null;
-          if (_interstitialLoadAttempts <= maxFailedLoadAttempts) {
-            _loadInterstitialAd();
-          }
+
+          // Exponential backoff: 2s, 4s, 8s... up to 60s
+          final retryDelay = Duration(
+            seconds: (1 << _interstitialLoadAttempts).clamp(2, 60),
+          );
+          Future.delayed(retryDelay, _loadInterstitialAd);
         },
       ),
     );
@@ -50,7 +53,7 @@ class AdManager {
 
   void showInterstitialAd({required VoidCallback onAdDismissed}) {
     _wallpaperClickCount++;
-    
+
     // Only show every N times (Frequency Capping)
     if (_wallpaperClickCount % AdConfig.interstitialFrequency != 0) {
       debugPrint('Interstitial capped: count $_wallpaperClickCount');
@@ -100,9 +103,12 @@ class AdManager {
           debugPrint('RewardedAd failed to load: $error');
           _rewardedLoadAttempts++;
           _rewardedAd = null;
-          if (_rewardedLoadAttempts <= maxFailedLoadAttempts) {
-            _loadRewardedAd();
-          }
+
+          // Exponential backoff
+          final retryDelay = Duration(
+            seconds: (1 << _rewardedLoadAttempts).clamp(2, 60),
+          );
+          Future.delayed(retryDelay, _loadRewardedAd);
         },
       ),
     );

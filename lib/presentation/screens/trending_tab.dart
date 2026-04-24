@@ -14,11 +14,12 @@ class TrendingTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final trendingWallpapers = ref.watch(trendingWallpapersProvider);
-    final isDarkMode = ref.watch(themeProvider);
     final gridColumns = ref.watch(
       settingsProvider.select((s) => s.gridColumns),
     );
+    final wallpapersAsync = ref.watch(wallpapersProvider);
     final l10n = AppLocalizations.of(context)!;
+    final isDarkMode = ref.watch(themeProvider);
 
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
@@ -26,44 +27,52 @@ class TrendingTab extends ConsumerWidget {
         SliverToBoxAdapter(
           child: SizedBox(height: MediaQuery.of(context).padding.top + 70),
         ),
-        if (trendingWallpapers.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.flame,
-                    size: 64,
-                    color: isDarkMode ? Colors.white24 : Colors.black12,
+        wallpapersAsync.when(
+          data: (categories) {
+            if (trendingWallpapers.isEmpty) {
+              return SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.flame,
+                        size: 64,
+                        color: isDarkMode ? Colors.white24 : Colors.black12,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        l10n.noTrending,
+                        style: TextStyle(
+                          color: isDarkMode ? Colors.white60 : Colors.black54,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.noTrending,
-                    style: TextStyle(
-                      color: isDarkMode ? Colors.white60 : Colors.black54,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
+                ),
+              );
+            }
+            return SliverPadding(
+              padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
+              sliver: SliverMasonryGrid.count(
+                crossAxisCount: gridColumns,
+                mainAxisSpacing: gridColumns == 2 ? 12 : 8,
+                crossAxisSpacing: gridColumns == 2 ? 12 : 8,
+                itemBuilder: (context, index) {
+                  return WallpaperCard(wallpaper: trendingWallpapers[index]);
+                },
+                childCount: trendingWallpapers.length,
               ),
-            ),
-          )
-        else
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 5, 16, 120),
-            sliver: SliverMasonryGrid.count(
-              crossAxisCount: gridColumns,
-              mainAxisSpacing: gridColumns == 2 ? 12 : 8,
-              crossAxisSpacing: gridColumns == 2 ? 12 : 8,
-              itemBuilder: (context, index) {
-                return WallpaperCard(wallpaper: trendingWallpapers[index]);
-              },
-              childCount: trendingWallpapers.length,
-            ),
+            );
+          },
+          loading: () => const SliverFillRemaining(
+            child: Center(child: CupertinoActivityIndicator()),
           ),
+          error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+        ),
       ],
     );
   }

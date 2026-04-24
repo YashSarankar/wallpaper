@@ -40,6 +40,8 @@ class _WallpaperPreviewScreenState
     extends ConsumerState<WallpaperPreviewScreen> {
   bool _isSetting = false;
   double? _progress;
+  double? _highResProgress;
+  bool _isHighResLoaded = false;
   bool _showPreviewUI = true;
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 
@@ -56,14 +58,43 @@ class _WallpaperPreviewScreenState
     if (_isLive) {
       _initVideo();
     } else {
-      // 🔥 GOLD STANDARD: Pre-cache the high-res image immediately so the fade-in
-      // from Medium to High-Res is as instantaneous as possible.
+      // 🔥 Listen to high-res progress in background
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          precacheImage(CachedNetworkImageProvider(_highResUrl), context);
-        }
+        if (mounted) _listenToHighResProgress();
       });
     }
+  }
+
+  void _listenToHighResProgress() {
+    if (widget.localFile != null) {
+      setState(() => _isHighResLoaded = true);
+      return;
+    }
+
+    final url = _highResUrl;
+    DefaultCacheManager()
+        .getFileStream(url, withProgress: true)
+        .listen(
+          (response) {
+            if (!mounted) return;
+            if (response is DownloadProgress) {
+              setState(() {
+                _highResProgress = response.progress;
+                _isHighResLoaded = false;
+              });
+            } else if (response is FileResponse) {
+              setState(() {
+                _highResProgress = null;
+                _isHighResLoaded = true;
+              });
+              // Also precache to make sure Flutter's ImageCache is aware
+              precacheImage(CachedNetworkImageProvider(url), context);
+            }
+          },
+          onError: (e) {
+            if (mounted) setState(() => _highResProgress = null);
+          },
+        );
   }
 
   Future<void> _initVideo() async {
@@ -468,6 +499,60 @@ class _WallpaperPreviewScreenState
                       ),
                     ),
             ),
+
+            // 4K Quality Progress Indicator (Top)
+            if (!_isLive && !_isHighResLoaded && _highResProgress != null)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 22,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.4),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                value: _highResProgress,
+                                strokeWidth: 2,
+                                color: Colors.white,
+                                backgroundColor: Colors.white10,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'ENHANCING TO 4K... ${(_highResProgress! * 100).toInt()}%',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // Top Header (Back & Share)
             AnimatedPositioned(

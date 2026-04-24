@@ -111,7 +111,24 @@ class HomeTab extends ConsumerWidget {
                 },
               );
             },
-            orElse: () => const SizedBox.shrink(),
+            orElse: () => Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CupertinoActivityIndicator(radius: 12),
+                  const SizedBox(height: 16),
+                  Text(
+                    l10n.preparingExperience,
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white38 : Colors.black38,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ],

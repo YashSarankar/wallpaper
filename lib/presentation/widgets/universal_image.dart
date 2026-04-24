@@ -46,13 +46,16 @@ class _UniversalImageState extends State<UniversalImage> {
   // Each stage index represents how far we've loaded.
   // -1 = only showing BlurHash, 0+ = network layers loaded.
   int _loadedUpTo = -1;
-  late List<String> _netLayers;
+  List<String> _netLayers = [];
   int _sequenceId = 0;
 
   @override
   void initState() {
     super.initState();
-    _init();
+    _setupLayers();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _initLoading();
+    });
   }
 
   @override
@@ -62,14 +65,12 @@ class _UniversalImageState extends State<UniversalImage> {
         oldWidget.thumbnailUrl != widget.thumbnailUrl ||
         oldWidget.lowThumbnailUrl != widget.lowThumbnailUrl ||
         oldWidget.blurHash != widget.blurHash) {
-      _init();
+      _setupLayers();
+      _initLoading();
     }
   }
 
-  void _init() {
-    _sequenceId++;
-    final mySeq = _sequenceId;
-    
+  void _setupLayers() {
     // Build prioritized layer list: low → mid → original
     _netLayers = [
       if (widget.lowThumbnailUrl != null && widget.lowThumbnailUrl!.isNotEmpty)
@@ -84,34 +85,45 @@ class _UniversalImageState extends State<UniversalImage> {
         widget.path,
     ];
 
-    // 🔥 SYNC CACHE CHECK: Identify layers already in memory/disk cache 
-    // to avoid starting from BlurHash if we already have better data.
+    // 🔥 SYNC CACHE CHECK: Identify layers already in memory/disk cache
+    // This MUST happen here (sync) to avoid a one-frame flicker to BlurHash.
     int highestCached = -1;
     for (int i = 0; i < _netLayers.length; i++) {
       final provider = CachedNetworkImageProvider(
-        _netLayers[i], 
+        _netLayers[i],
         maxWidth: widget.cacheWidth,
       );
-      final stream = provider.resolve(ImageConfiguration.empty);
+
+      // Use a surgical check that doesn't trigger full image cloning
+      final key = provider.obtainKey(ImageConfiguration.empty);
+      // obtainKey is technically a Future, but for CachedNetworkImageProvider
+      // it usually completes immediately or we can check the imageCache status.
+
+      final ImageStream stream = provider.resolve(ImageConfiguration.empty);
       bool isSync = false;
-      final listener = ImageStreamListener((_, bool sync) {
+      ImageStreamListener? listener;
+      listener = ImageStreamListener((ImageInfo info, bool sync) {
         isSync = sync;
       });
+
       stream.addListener(listener);
       stream.removeListener(listener);
-      
+
       if (isSync) {
         highestCached = i;
       } else {
-        // If this layer isn't cached, don't check higher ones yet 
-        // to maintain the progressive loading order.
         break;
       }
     }
-
     _loadedUpTo = highestCached;
+  }
+
+  void _initLoading() {
+    _sequenceId++;
+    final mySeq = _sequenceId;
 
     // Begin staged loading for remaining layers
+    // (This part uses context so it stays in post-frame callback)
     _loadStages(mySeq);
   }
 
@@ -207,8 +219,8 @@ class _UniversalImageState extends State<UniversalImage> {
               cacheWidth: widget.cacheWidth,
               // Use a much longer fade for the final high-res layer (Layer 2+)
               // to make the transition from Mid-res to 4K feel cinematic and smooth.
-              duration: i == _netLayers.length - 1 
-                  ? const Duration(milliseconds: 1200) 
+              duration: i == _netLayers.length - 1
+                  ? const Duration(milliseconds: 1200)
                   : const Duration(milliseconds: 400),
             ),
       ],
@@ -244,18 +256,16 @@ class _FadeInLayerState extends State<_FadeInLayer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
-  bool _isLoadedSync = false;
+  ImageStream? _imageStream;
+  ImageStreamListener? _imageListener;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: widget.duration,
-    );
+    _ctrl = AnimationController(vsync: this, duration: widget.duration);
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
 
-    // 🔥 PRE-CHECK: If the image is already in Flutter's memory cache, 
+    // 🔥 PRE-CHECK: If the image is already in Flutter's memory cache,
     // we should show it INSTANTLY (value=1.0) to avoid any flicker.
     _checkCache();
   }
@@ -265,22 +275,26 @@ class _FadeInLayerState extends State<_FadeInLayer>
       widget.url,
       maxWidth: widget.cacheWidth,
     );
-    
-    final ImageStream stream = provider.resolve(ImageConfiguration.empty);
-    stream.addListener(
-      ImageStreamListener((ImageInfo info, bool synchronousCall) {
-        if (synchronousCall && mounted) {
-          _isLoadedSync = true;
-          _ctrl.value = 1.0;
-        } else if (mounted) {
-          _ctrl.forward();
-        }
-      }),
-    );
+
+    _imageStream = provider.resolve(ImageConfiguration.empty);
+    _imageListener = ImageStreamListener((
+      ImageInfo info,
+      bool synchronousCall,
+    ) {
+      if (synchronousCall && mounted) {
+        _ctrl.value = 1.0;
+      } else if (mounted) {
+        _ctrl.forward();
+      }
+    });
+    _imageStream!.addListener(_imageListener!);
   }
 
   @override
   void dispose() {
+    if (_imageStream != null && _imageListener != null) {
+      _imageStream!.removeListener(_imageListener!);
+    }
     _ctrl.dispose();
     super.dispose();
   }
