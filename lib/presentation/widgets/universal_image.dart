@@ -69,8 +69,7 @@ class _UniversalImageState extends State<UniversalImage> {
   void _init() {
     _sequenceId++;
     final mySeq = _sequenceId;
-    _loadedUpTo = -1; // Start at BlurHash only
-
+    
     // Build prioritized layer list: low → mid → original
     _netLayers = [
       if (widget.lowThumbnailUrl != null && widget.lowThumbnailUrl!.isNotEmpty)
@@ -85,13 +84,43 @@ class _UniversalImageState extends State<UniversalImage> {
         widget.path,
     ];
 
-    // Begin staged loading immediately
+    // 🔥 SYNC CACHE CHECK: Identify layers already in memory/disk cache 
+    // to avoid starting from BlurHash if we already have better data.
+    int highestCached = -1;
+    for (int i = 0; i < _netLayers.length; i++) {
+      final provider = CachedNetworkImageProvider(
+        _netLayers[i], 
+        maxWidth: widget.cacheWidth,
+      );
+      final stream = provider.resolve(ImageConfiguration.empty);
+      bool isSync = false;
+      final listener = ImageStreamListener((_, bool sync) {
+        isSync = sync;
+      });
+      stream.addListener(listener);
+      stream.removeListener(listener);
+      
+      if (isSync) {
+        highestCached = i;
+      } else {
+        // If this layer isn't cached, don't check higher ones yet 
+        // to maintain the progressive loading order.
+        break;
+      }
+    }
+
+    _loadedUpTo = highestCached;
+
+    // Begin staged loading for remaining layers
     _loadStages(mySeq);
   }
 
   Future<void> _loadStages(int seqId) async {
     for (int i = 0; i < _netLayers.length; i++) {
       if (!mounted || _sequenceId != seqId) return;
+
+      // Skip layers already identified as cached in _init
+      if (i <= _loadedUpTo) continue;
 
       final url = _netLayers[i];
 
@@ -176,6 +205,11 @@ class _UniversalImageState extends State<UniversalImage> {
                   ? widget.filterQuality
                   : FilterQuality.low,
               cacheWidth: widget.cacheWidth,
+              // Use a much longer fade for the final high-res layer (Layer 2+)
+              // to make the transition from Mid-res to 4K feel cinematic and smooth.
+              duration: i == _netLayers.length - 1 
+                  ? const Duration(milliseconds: 1200) 
+                  : const Duration(milliseconds: 400),
             ),
       ],
     );
@@ -190,6 +224,7 @@ class _FadeInLayer extends StatefulWidget {
   final Alignment alignment;
   final FilterQuality filterQuality;
   final int? cacheWidth;
+  final Duration duration;
 
   const _FadeInLayer({
     super.key,
@@ -198,6 +233,7 @@ class _FadeInLayer extends StatefulWidget {
     required this.alignment,
     required this.filterQuality,
     this.cacheWidth,
+    required this.duration,
   });
 
   @override
@@ -208,20 +244,39 @@ class _FadeInLayerState extends State<_FadeInLayer>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _opacity;
+  bool _isLoadedSync = false;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: widget.duration,
     );
     _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-    // Since this widget is only added to the tree AFTER the image is in cache,
-    // we start the fade immediately on mount.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _ctrl.forward();
-    });
+
+    // 🔥 PRE-CHECK: If the image is already in Flutter's memory cache, 
+    // we should show it INSTANTLY (value=1.0) to avoid any flicker.
+    _checkCache();
+  }
+
+  void _checkCache() {
+    final provider = CachedNetworkImageProvider(
+      widget.url,
+      maxWidth: widget.cacheWidth,
+    );
+    
+    final ImageStream stream = provider.resolve(ImageConfiguration.empty);
+    stream.addListener(
+      ImageStreamListener((ImageInfo info, bool synchronousCall) {
+        if (synchronousCall && mounted) {
+          _isLoadedSync = true;
+          _ctrl.value = 1.0;
+        } else if (mounted) {
+          _ctrl.forward();
+        }
+      }),
+    );
   }
 
   @override

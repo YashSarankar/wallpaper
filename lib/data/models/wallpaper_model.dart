@@ -36,6 +36,27 @@ class WallpaperModel extends Equatable {
     this.blurHash,
   });
 
+  String get highResUrl {
+    // Preferred order for mobile preview: High (1440p) -> Original 4K
+    String baseUrl = highUrl ?? url;
+
+    if (baseUrl.contains('unsplash.com')) {
+      // Use much higher resolution for preview (up to 5K)
+      baseUrl = baseUrl.replaceAllMapped(
+        RegExp(r'([?&])w=\d+'),
+        (m) => '${m[1]}w=5000',
+      );
+      baseUrl = baseUrl.replaceAllMapped(
+        RegExp(r'([?&])q=\d+'),
+        (m) => '${m[1]}q=100',
+      );
+      if (!baseUrl.contains('w=5000')) {
+        baseUrl = '$baseUrl${baseUrl.contains('?') ? '&' : '?'}w=5000';
+      }
+    }
+    return baseUrl;
+  }
+
   factory WallpaperModel.fromJson(
     Map<String, dynamic> json,
     String categoryName,

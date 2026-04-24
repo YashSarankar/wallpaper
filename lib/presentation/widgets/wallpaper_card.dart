@@ -82,6 +82,11 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
         _isNavigating = true;
         final heroTag = '${widget.wallpaper.id}_${context.hashCode}';
 
+        // 🔥 Ultra-early precaching: start loading high-res immediately
+        precacheImage(
+          CachedNetworkImageProvider(widget.wallpaper.highResUrl),
+          context,
+        );
         if (widget.wallpaper.midUrl != null) {
           precacheImage(
             CachedNetworkImageProvider(widget.wallpaper.midUrl!),
@@ -90,33 +95,38 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
         }
 
         // Show Interstitial every N times (AdConfig.interstitialFrequency)
-        ref.read(adManagerProvider).showInterstitialAd(
-          onAdDismissed: () {
-            if (!mounted) return;
-            Navigator.push(
-              context,
-              PageRouteBuilder(
-                transitionDuration: const Duration(milliseconds: 400),
-                pageBuilder: (context, animation, secondaryAnimation) =>
-                    WallpaperPreviewScreen(
-                      wallpaper: widget.wallpaper,
-                      heroTag: heroTag,
-                    ),
-                transitionsBuilder:
-                    (context, animation, secondaryAnimation, child) {
-                      return FadeTransition(opacity: animation, child: child);
-                    },
-              ),
-            ).then((_) {
-              if (mounted) {
-                setState(() => _isNavigating = false);
-                if (_isLive && _videoReady) {
-                  _videoController?.play();
-                }
-              }
-            });
-          },
-        );
+        ref
+            .read(adManagerProvider)
+            .showInterstitialAd(
+              onAdDismissed: () {
+                if (!mounted) return;
+                Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    transitionDuration: const Duration(milliseconds: 400),
+                    pageBuilder: (context, animation, secondaryAnimation) =>
+                        WallpaperPreviewScreen(
+                          wallpaper: widget.wallpaper,
+                          heroTag: heroTag,
+                        ),
+                    transitionsBuilder:
+                        (context, animation, secondaryAnimation, child) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                  ),
+                ).then((_) {
+                  if (mounted) {
+                    setState(() => _isNavigating = false);
+                    if (_isLive && _videoReady) {
+                      _videoController?.play();
+                    }
+                  }
+                });
+              },
+            );
       },
       child: Container(
         decoration: BoxDecoration(
@@ -154,7 +164,6 @@ class _WallpaperCardState extends ConsumerState<WallpaperCard> {
                           blurHash: widget.wallpaper.blurHash,
                           fit: BoxFit.cover,
                           borderRadius: 28,
-                          cacheWidth: 400,
                         ),
                 ),
               ),

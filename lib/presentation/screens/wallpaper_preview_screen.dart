@@ -10,6 +10,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player/video_player.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 
 import '../../data/models/wallpaper_model.dart';
 import '../widgets/universal_image.dart';
@@ -59,16 +60,7 @@ class _WallpaperPreviewScreenState
       // from Medium to High-Res is as instantaneous as possible.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          precacheImage(
-            CachedNetworkImageProvider(
-              _highResUrl,
-              maxWidth:
-                  (MediaQuery.of(context).size.width *
-                          MediaQuery.of(context).devicePixelRatio)
-                      .toInt(),
-            ),
-            context,
-          );
+          precacheImage(CachedNetworkImageProvider(_highResUrl), context);
         }
       });
     }
@@ -100,70 +92,44 @@ class _WallpaperPreviewScreenState
 
   String get _highResUrl {
     if (widget.localFile != null) return widget.localFile!.path;
-
-    // Preferred order for mobile preview: 1440p Optimized (High) -> Original 4K
-    // This saves bandwidth/GPU while remaining pin-sharp on nearly all phones.
-    String url = widget.wallpaper!.highUrl ?? widget.wallpaper!.url;
-
-    if (url.contains('unsplash.com')) {
-      // Use much higher resolution for preview/zoom (up to 5K)
-      url = url.replaceAllMapped(
-        RegExp(r'([?&])w=\d+'),
-        (m) => '${m[1]}w=5000',
-      );
-      url = url.replaceAllMapped(RegExp(r'([?&])q=\d+'), (m) => '${m[1]}q=100');
-      if (!url.contains('w=5000')) url = '$url&w=5000';
-    }
-    return url;
+    return widget.wallpaper!.highResUrl;
   }
 
   Future<File?> _downloadFile(String url) async {
-    setState(() => _progress = 0.0);
+    setState(() => _progress = 0.01);
     try {
-      final client = http.Client();
-      final request = http.Request('GET', Uri.parse(url));
-      final response = await client.send(request);
+      // 🔥 REUSE CACHE: If UniversalImage already loaded the 4K image,
+      // DefaultCacheManager will return it INSTANTLY.
+      final stream = DefaultCacheManager().getFileStream(
+        url,
+        withProgress: true,
+      );
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to download file: ${response.statusCode}');
+      File? resultFile;
+      await for (final response in stream) {
+        if (response is DownloadProgress) {
+          if (mounted) {
+            setState(() => _progress = response.progress);
+          }
+        } else if (response is FileResponse) {
+          resultFile = (response as FileInfo).file;
+        }
       }
-
-      final contentLength = response.contentLength ?? 0;
-      int receivedBytes = 0;
-
-      final dir = await getTemporaryDirectory();
-      final fileName = url.split('/').last;
-      final path = '${dir.path}/$fileName';
-      final file = File(path);
-      final sink = file.openWrite();
-
-      await response.stream
-          .listen(
-            (chunk) {
-              receivedBytes += chunk.length;
-              sink.add(chunk);
-              if (contentLength > 0) {
-                setState(() {
-                  _progress = receivedBytes / contentLength;
-                });
-              }
-            },
-            onDone: () async {
-              await sink.close();
-              client.close();
-            },
-            onError: (e) {
-              sink.close();
-              client.close();
-              throw e;
-            },
-            cancelOnError: true,
-          )
-          .asFuture();
-
-      return file;
+      return resultFile;
     } catch (e) {
-      debugPrint('Error downloading file: $e');
+      debugPrint('Error downloading file via CacheManager: $e');
+      // Fallback to manual download if CacheManager fails
+      try {
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          final dir = await getTemporaryDirectory();
+          final file = File('${dir.path}/${url.split('/').last}');
+          await file.writeAsBytes(response.bodyBytes);
+          return file;
+        }
+      } catch (inner) {
+        debugPrint('Fallback download also failed: $inner');
+      }
       return null;
     } finally {
       if (mounted) {
