@@ -11,7 +11,8 @@ import '../providers/favorites_provider.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import '../../core/constants/app_constants.dart';
-import '../../utils/ad_helper.dart';
+import '../../core/ads/ad_manager.dart';
+import '../widgets/banner_ad_widget.dart';
 import 'home_tab.dart';
 import 'trending_tab.dart';
 import 'category_tab.dart';
@@ -36,14 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   ];
 
   Future<void> _pickImageFromGallery() async {
-    final adHelper = AdHelper();
-
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
-    );
+    final adManager = ref.read(adManagerProvider);
 
     void handlePickImage() async {
       final picker = ImagePicker();
@@ -65,24 +59,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
     }
 
-    adHelper.loadRewardedAd(
-      onLoaded: () {
-        if (mounted) {
-          Navigator.pop(context); // Dismiss loading
-          adHelper.showRewardedAd(
-            onRewardEarned: handlePickImage,
-            onDismissed: () {},
-          );
-        }
-      },
-      onFailed: () {
-        if (mounted) {
-          Navigator.pop(context); // Dismiss loading
-          // Fallback to allow functionality even if ad fails
-          handlePickImage();
-        }
-      },
-    );
+    if (adManager.isRewardedAdReady) {
+      adManager.showRewardedAd(
+        onRewardEarned: handlePickImage,
+        onAdDismissed: () {},
+      );
+    } else {
+      handlePickImage();
+    }
   }
 
   @override
@@ -183,6 +167,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
+            ),
+
+            // Banner Ad above Bottom Navigation
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.of(context).padding.bottom + 68,
+              child: const BannerAdWidget(),
             ),
 
             // iOS Style Glassmorphic Bottom Navigation

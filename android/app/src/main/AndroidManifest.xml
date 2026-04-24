@@ -44,7 +44,7 @@
             android:value="2" />
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-5747718526576102~2181540543"/>
+            android:value="ca-app-pub-9441953606119572~9722475794"/>
         <service
             android:name=".VideoWallpaperService"
             android:label="Amozea Live Wallpaper"

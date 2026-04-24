@@ -6,7 +6,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../utils/ad_helper.dart';
+import '../../core/ads/ad_manager.dart';
+import '../widgets/banner_ad_widget.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/favorites_provider.dart';
@@ -15,16 +16,8 @@ class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   Future<void> _pickAndAddPhotos(BuildContext context, WidgetRef ref) async {
-    final adHelper = AdHelper();
+    final adManager = ref.read(adManagerProvider);
 
-    // Show loading indicator
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Center(child: CircularProgressIndicator()),
-    );
-
-    // Define the reward action to avoid code duplication
     void handleReward() async {
       final picker = ImagePicker();
       try {
@@ -54,31 +47,14 @@ class SettingsScreen extends ConsumerWidget {
       }
     }
 
-    // Load and show ad with callbacks
-    adHelper.loadRewardedAd(
-      onLoaded: () {
-        if (context.mounted) {
-          Navigator.pop(context); // Dismiss loading dialog
-          adHelper.showRewardedAd(
-            onRewardEarned: handleReward,
-            onDismissed: () {
-              // Optional: handle dismissal
-            },
-          );
-        }
-      },
-      onFailed: () {
-        if (context.mounted) {
-          Navigator.pop(context); // Dismiss loading dialog
-          // If ad fails to load, we can choose to let the user proceed anyway
-          // relying on the fallback in showRewardedAd which calls onRewardEarned
-          adHelper.showRewardedAd(
-            onRewardEarned: handleReward,
-            onDismissed: null,
-          );
-        }
-      },
-    );
+    if (adManager.isRewardedAdReady) {
+      adManager.showRewardedAd(
+        onRewardEarned: handleReward,
+        onAdDismissed: () {},
+      );
+    } else {
+      handleReward();
+    }
   }
 
   Future<void> _clearCache(BuildContext context) async {
@@ -462,6 +438,8 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 50),
+          const BannerAdWidget(),
+          const SizedBox(height: 20),
         ],
       ),
     );

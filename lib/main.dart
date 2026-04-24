@@ -16,6 +16,7 @@ import 'presentation/providers/wallpaper_provider.dart';
 import 'presentation/providers/settings_provider.dart';
 import 'presentation/providers/live_wallpaper_provider.dart';
 import 'presentation/screens/splash_screen.dart';
+import 'core/ads/ad_manager.dart';
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -217,12 +218,19 @@ void main() async {
 
   // Initialize these in background without awaiting to speed up cold start
   Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-  MobileAds.instance.initialize();
+  
+  // Initialize Ads and start preloading
+  await MobileAds.instance.initialize();
+  final container = ProviderContainer();
+  container.read(adManagerProvider).init();
 
   // Enable Edge-to-Edge for Android 15+ compatibility
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(UncontrolledProviderScope(
+    container: container,
+    child: const MyApp(),
+  ));
 }
 
 class MyApp extends ConsumerStatefulWidget {
