@@ -85,37 +85,10 @@ class _UniversalImageState extends State<UniversalImage> {
         widget.path,
     ];
 
-    // 🔥 SYNC CACHE CHECK: Identify layers already in memory/disk cache
-    // This MUST happen here (sync) to avoid a one-frame flicker to BlurHash.
-    int highestCached = -1;
-    for (int i = 0; i < _netLayers.length; i++) {
-      final provider = CachedNetworkImageProvider(
-        _netLayers[i],
-        maxWidth: widget.cacheWidth,
-      );
-
-      // Use a surgical check that doesn't trigger full image cloning
-      final key = provider.obtainKey(ImageConfiguration.empty);
-      // obtainKey is technically a Future, but for CachedNetworkImageProvider
-      // it usually completes immediately or we can check the imageCache status.
-
-      final ImageStream stream = provider.resolve(ImageConfiguration.empty);
-      bool isSync = false;
-      ImageStreamListener? listener;
-      listener = ImageStreamListener((ImageInfo info, bool sync) {
-        isSync = sync;
-      });
-
-      stream.addListener(listener);
-      stream.removeListener(listener);
-
-      if (isSync) {
-        highestCached = i;
-      } else {
-        break;
-      }
-    }
-    _loadedUpTo = highestCached;
+    // Identify layers already in memory/disk cache
+    // We'll let _loadStages handle identifying and revealing cached layers
+    // sequentially to avoid manual ImageStream handle management.
+    _loadedUpTo = -1;
   }
 
   void _initLoading() {
@@ -143,6 +116,7 @@ class _UniversalImageState extends State<UniversalImage> {
         await precacheImage(
           CachedNetworkImageProvider(url, maxWidth: widget.cacheWidth),
           context,
+          onError: (e, s) {},
         );
       } catch (e) {
         // Silence errors here; we'll handle them in the UI layer if needed.
@@ -196,18 +170,18 @@ class _UniversalImageState extends State<UniversalImage> {
       fit: StackFit.expand,
       children: [
         // ─── Layer 0: BlurHash ─────────────────────────────────────────
-        // Synchronous — renders in the FIRST frame from an embedded string.
-        // No network call. Covers the entire card with a blurred color impression.
-        if (widget.blurHash != null && widget.blurHash!.isNotEmpty)
-          BlurHash(hash: widget.blurHash!)
-        else
-          // Fallback if no blurHash: solid black (AMOLED) — not grey, not a spinner
-          const ColoredBox(color: Colors.black12),
+        // Only show if no network layers are visible yet.
+        if (_loadedUpTo < 0)
+          widget.blurHash != null && widget.blurHash!.isNotEmpty
+              ? BlurHash(hash: widget.blurHash!)
+              : const ColoredBox(color: Colors.black12),
 
         // ─── Network layers ───────────────────────────────────────────
-        // Each one fades in atop the previous layer after its bytes are ready.
+        // PRUNING LOGIC: Only show the current layer and the one immediately below it.
+        // This prevents "Cannot clone a disposed image" crashes by ensuring 
+        // we don't have 4-5 high-res layers in memory simultaneously.
         for (int i = 0; i < _netLayers.length; i++)
-          if (i <= _loadedUpTo)
+          if (i == _loadedUpTo || (i == _loadedUpTo - 1 && _loadedUpTo > 0))
             _FadeInLayer(
               key: ValueKey(_netLayers[i]),
               url: _netLayers[i],
@@ -217,8 +191,6 @@ class _UniversalImageState extends State<UniversalImage> {
                   ? widget.filterQuality
                   : FilterQuality.low,
               cacheWidth: widget.cacheWidth,
-              // Use a much longer fade for the final high-res layer (Layer 2+)
-              // to make the transition from Mid-res to 4K feel cinematic and smooth.
               duration: i == _netLayers.length - 1
                   ? const Duration(milliseconds: 1200)
                   : const Duration(milliseconds: 400),
@@ -230,7 +202,9 @@ class _UniversalImageState extends State<UniversalImage> {
 
 /// A stateless widget that renders a CachedNetworkImage layer and
 /// fades it in once (since it's only added to the tree after load is complete).
-class _FadeInLayer extends StatefulWidget {
+/// A stateless widget that renders a CachedNetworkImage layer and
+/// fades it in once (since it's only added to the tree after load is complete).
+class _FadeInLayer extends StatelessWidget {
   final String url;
   final BoxFit fit;
   final Alignment alignment;
@@ -249,70 +223,26 @@ class _FadeInLayer extends StatefulWidget {
   });
 
   @override
-  State<_FadeInLayer> createState() => _FadeInLayerState();
-}
-
-class _FadeInLayerState extends State<_FadeInLayer>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _opacity;
-  ImageStream? _imageStream;
-  ImageStreamListener? _imageListener;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(vsync: this, duration: widget.duration);
-    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
-
-    // 🔥 PRE-CHECK: If the image is already in Flutter's memory cache,
-    // we should show it INSTANTLY (value=1.0) to avoid any flicker.
-    _checkCache();
-  }
-
-  void _checkCache() {
-    final provider = CachedNetworkImageProvider(
-      widget.url,
-      maxWidth: widget.cacheWidth,
-    );
-
-    _imageStream = provider.resolve(ImageConfiguration.empty);
-    _imageListener = ImageStreamListener((
-      ImageInfo info,
-      bool synchronousCall,
-    ) {
-      if (synchronousCall && mounted) {
-        _ctrl.value = 1.0;
-      } else if (mounted) {
-        _ctrl.forward();
-      }
-    });
-    _imageStream!.addListener(_imageListener!);
-  }
-
-  @override
-  void dispose() {
-    if (_imageStream != null && _imageListener != null) {
-      _imageStream!.removeListener(_imageListener!);
-    }
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Image(
-        image: CachedNetworkImageProvider(
-          widget.url,
-          maxWidth: widget.cacheWidth,
-        ),
-        fit: widget.fit,
-        alignment: widget.alignment,
-        filterQuality: widget.filterQuality,
-        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-      ),
+    return Image(
+      image: CachedNetworkImageProvider(url, maxWidth: cacheWidth),
+      fit: fit,
+      alignment: alignment,
+      filterQuality: filterQuality,
+      gaplessPlayback: true,
+      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      // 🔥 The built-in, stable way to handle fade-ins and cache detection.
+      // Eliminates the need for manual AnimationControllers and ImageStreamListeners.
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) return child;
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: duration,
+          curve: Curves.easeOut,
+          child: child,
+        );
+      },
     );
   }
 }
+

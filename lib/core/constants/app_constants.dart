@@ -1,7 +1,7 @@
 class AppConstants {
   // App Info
   static const String appName = 'Amozea – AMOLED Wallpapers';
-  static const String appVersion = '1.5.0';
+  static const String appVersion = '2.0.1';
 
   // Storage Keys
   static const String themeBox = 'theme_box';
@@ -12,8 +12,11 @@ class AppConstants {
   // Assets
   static const String heartIcon = 'assets/heart.png';
   static const String settingsIcon = 'assets/settings.png';
+  static const String appLogoPath = 'assets/applogo.png';
 
   // Remote Config
   static const String remoteWallpaperJsonUrl =
       'https://wallpaper-backend-917312759089.europe-west1.run.app/api/wallpapers';
+  static const String remoteConfigUrl =
+      'https://wallpaper-backend-917312759089.europe-west1.run.app/api/config';
 }

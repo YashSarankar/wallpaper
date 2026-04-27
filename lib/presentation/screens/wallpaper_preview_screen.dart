@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -43,6 +44,7 @@ class _WallpaperPreviewScreenState
   double? _highResProgress;
   bool _isHighResLoaded = false;
   bool _showPreviewUI = true;
+  StreamSubscription? _highResSub;
   static const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
 
   VideoPlayerController? _videoController;
@@ -72,7 +74,7 @@ class _WallpaperPreviewScreenState
     }
 
     final url = _highResUrl;
-    DefaultCacheManager()
+    _highResSub = DefaultCacheManager()
         .getFileStream(url, withProgress: true)
         .listen(
           (response) {
@@ -88,7 +90,13 @@ class _WallpaperPreviewScreenState
                 _isHighResLoaded = true;
               });
               // Also precache to make sure Flutter's ImageCache is aware
-              precacheImage(CachedNetworkImageProvider(url), context);
+              try {
+                precacheImage(
+                  CachedNetworkImageProvider(url),
+                  context,
+                  onError: (e, s) {},
+                );
+              } catch (_) {}
             }
           },
           onError: (e) {
@@ -110,13 +118,14 @@ class _WallpaperPreviewScreenState
       controller.play();
       setState(() => _videoReady = true);
     } catch (e) {
-      debugPrint('Video init error: $e');
+      // Error initialized
     }
   }
 
   @override
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    _highResSub?.cancel();
     _videoController?.dispose();
     super.dispose();
   }
@@ -148,7 +157,6 @@ class _WallpaperPreviewScreenState
       }
       return resultFile;
     } catch (e) {
-      debugPrint('Error downloading file via CacheManager: $e');
       // Fallback to manual download if CacheManager fails
       try {
         final response = await http.get(Uri.parse(url));
@@ -159,7 +167,7 @@ class _WallpaperPreviewScreenState
           return file;
         }
       } catch (inner) {
-        debugPrint('Fallback download also failed: $inner');
+        // Fallback failed
       }
       return null;
     } finally {
@@ -221,7 +229,6 @@ class _WallpaperPreviewScreenState
     if (widget.localFile != null) return;
     final l10n = AppLocalizations.of(context)!;
 
-    debugPrint('Starting download process for: ${widget.wallpaper!.url}');
     // Manual permission requests removed to follow Privacy-First guidelines.
     // Modern Android handles file saving/picking via secure system pickers.
 
@@ -233,7 +240,6 @@ class _WallpaperPreviewScreenState
 
       final file = await _downloadFile(url);
       if (file != null) {
-        debugPrint('Temporary file downloaded to: ${file.path}');
         String savePath;
         if (Platform.isAndroid) {
           final directory = Directory('/storage/emulated/0/Download');
@@ -249,11 +255,7 @@ class _WallpaperPreviewScreenState
           savePath = '${appDir.path}/${url.split('/').last}';
         }
 
-        debugPrint('Attempting to copy file to: $savePath');
         final savedFile = await file.copy(savePath);
-        debugPrint(
-          'File saved successfully: ${savedFile.path}, exists: ${await savedFile.exists()}',
-        );
 
         if (mounted) {
           ScaffoldMessenger.of(
@@ -263,13 +265,10 @@ class _WallpaperPreviewScreenState
           await Future.delayed(const Duration(milliseconds: 800));
 
           try {
-            debugPrint('Invoking native openFile for: $savePath');
-            final result = await platform.invokeMethod('openFile', {
+            await platform.invokeMethod('openFile', {
               'path': savePath,
             });
-            debugPrint('Native openFile result: $result');
           } on PlatformException catch (e) {
-            debugPrint('Native openFile error: ${e.message}');
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Could not open file: ${e.message}')),
@@ -281,7 +280,6 @@ class _WallpaperPreviewScreenState
         throw Exception('File download failed (result was null)');
       }
     } catch (e) {
-      debugPrint('General download error: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,

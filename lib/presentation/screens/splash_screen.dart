@@ -6,8 +6,11 @@ import 'package:lottie/lottie.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import 'home_screen.dart';
+import 'force_update_screen.dart';
 import 'package:wallpaper/l10n/app_localizations.dart';
 import '../../data/models/wallpaper_model.dart';
+import '../../data/services/config_service.dart';
+import '../../core/constants/app_constants.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -221,6 +224,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                                         .read(wallpapersProvider.future)
                                         .timeout(const Duration(seconds: 3))
                                         .catchError((_) => <CategoryModel>[]),
+                                    
+                                    // 🔥 NEW: Check for Force Update
+                                    _checkForceUpdate(),
                                   ]);
 
                                   _navigateToHome();
@@ -314,10 +320,33 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   bool _navigationTriggered = false;
+  RemoteConfig? _remoteConfig;
+
+  Future<void> _checkForceUpdate() async {
+    final configService = ConfigService();
+    final config = await configService.fetchRemoteConfig();
+    if (config != null) {
+      if (config.forceUpdate && configService.shouldUpdate(AppConstants.appVersion, config.minVersion)) {
+        _remoteConfig = config;
+      }
+    }
+  }
 
   void _navigateToHome() {
     if (!mounted || _navigationTriggered) return;
     _navigationTriggered = true;
+
+    if (_remoteConfig != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (context) => ForceUpdateScreen(
+            updateUrl: _remoteConfig!.updateUrl,
+            message: _remoteConfig!.updateMessage,
+          ),
+        ),
+      );
+      return;
+    }
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(

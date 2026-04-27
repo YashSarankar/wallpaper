@@ -43,6 +43,7 @@ app.get('/', (req, res) => {
 // Define Routes
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/wallpapers', require('./routes/wallpapers'));
+app.use('/api/config', require('./routes/config'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

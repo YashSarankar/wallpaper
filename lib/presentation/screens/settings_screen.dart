@@ -11,6 +11,7 @@ import '../widgets/banner_ad_widget.dart';
 import '../providers/wallpaper_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/favorites_provider.dart';
+import '../../core/constants/app_constants.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -43,7 +44,7 @@ class SettingsScreen extends ConsumerWidget {
           }
         }
       } catch (e) {
-        debugPrint('Error picking images: $e');
+        // Error picking images
       }
     }
 
@@ -404,7 +405,7 @@ class SettingsScreen extends ConsumerWidget {
             icon: CupertinoIcons.doc_text,
             title: l10n.version,
             trailing: Text(
-              '1.5.1',
+              AppConstants.appVersion,
               style: TextStyle(
                 color: isDarkMode ? Colors.white38 : Colors.black38,
                 fontSize: 13,

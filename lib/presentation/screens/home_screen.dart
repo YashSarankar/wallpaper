@@ -55,7 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           );
         }
       } catch (e) {
-        debugPrint('Error picking image: $e');
+        // Error picking image
       }
     }
 

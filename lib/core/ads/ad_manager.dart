@@ -32,12 +32,10 @@ class AdManager {
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
-          debugPrint('InterstitialAd loaded.');
           _interstitialAd = ad;
           _interstitialLoadAttempts = 0;
         },
         onAdFailedToLoad: (error) {
-          debugPrint('InterstitialAd failed to load: $error');
           _interstitialLoadAttempts++;
           _interstitialAd = null;
 
@@ -56,13 +54,11 @@ class AdManager {
 
     // Only show every N times (Frequency Capping)
     if (_wallpaperClickCount % AdConfig.interstitialFrequency != 0) {
-      debugPrint('Interstitial capped: count $_wallpaperClickCount');
       onAdDismissed();
       return;
     }
 
     if (_interstitialAd == null) {
-      debugPrint('Warning: attempt to show interstitial before loaded.');
       onAdDismissed();
       _loadInterstitialAd();
       return;
@@ -70,13 +66,11 @@ class AdManager {
 
     _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
-        debugPrint('InterstitialAd dismissed.');
         ad.dispose();
         _loadInterstitialAd();
         onAdDismissed();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
-        debugPrint('InterstitialAd failed to show: $error');
         ad.dispose();
         _loadInterstitialAd();
         onAdDismissed();
@@ -95,12 +89,10 @@ class AdManager {
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
-          debugPrint('RewardedAd loaded.');
           _rewardedAd = ad;
           _rewardedLoadAttempts = 0;
         },
         onAdFailedToLoad: (error) {
-          debugPrint('RewardedAd failed to load: $error');
           _rewardedLoadAttempts++;
           _rewardedAd = null;
 
@@ -120,7 +112,6 @@ class AdManager {
     VoidCallback? onAdDismissed,
   }) {
     if (_rewardedAd == null) {
-      debugPrint('RewardedAd not ready. Letting user proceed.');
       onAdShowed?.call();
       onRewardEarned();
       _loadRewardedAd();
@@ -129,13 +120,11 @@ class AdManager {
 
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
-        debugPrint('RewardedAd dismissed.');
         ad.dispose();
         _loadRewardedAd();
         onAdDismissed?.call();
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
-        debugPrint('RewardedAd failed to show: $error');
         ad.dispose();
         _loadRewardedAd();
         onRewardEarned(); // Let them have the reward if it failed to show
@@ -145,7 +134,6 @@ class AdManager {
     onAdShowed?.call();
     _rewardedAd!.show(
       onUserEarnedReward: (ad, reward) {
-        debugPrint('User earned reward: ${reward.amount} ${reward.type}');
         onRewardEarned();
       },
     );

@@ -30,7 +30,6 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
-      debugPrint('--- WORKMANAGER TASK STARTED ($task) ---');
       WidgetsFlutterBinding.ensureInitialized();
 
       // Initialize Notifications inside the background task
@@ -48,20 +47,17 @@ void callbackDispatcher() {
       final prefs = await SharedPreferences.getInstance();
       final isEnabled = prefs.getBool('autoChangeEnabled') ?? false;
 
-      debugPrint('Auto-change status: $isEnabled');
 
       if (!isEnabled) {
-        debugPrint('Auto-change is disabled in settings. Skipping.');
         return true;
       }
 
       final favorites = LocalStorageService.getFavorites()
           .where((w) => w.type != 'animated')
           .toList();
-      debugPrint('Favorites count: ${favorites.length}');
+
 
       if (favorites.isEmpty) {
-        debugPrint('No favorites found. Turning OFF auto-change.');
         await prefs.setBool('autoChangeEnabled', false);
         await Workmanager().cancelByTag(autoChangeTask);
         return true;
@@ -76,7 +72,6 @@ void callbackDispatcher() {
       }
 
       final wallpaper = favorites[nextIndex];
-      debugPrint('Selected wallpaper index: $nextIndex (ID: ${wallpaper.id})');
 
       String downloadUrl = wallpaper.url;
       // High-res logic for Unsplash
@@ -100,7 +95,6 @@ void callbackDispatcher() {
       String? finalPath;
 
       if (downloadUrl.startsWith('http')) {
-        debugPrint('Downloading image from URL: $downloadUrl');
         http.Response? response;
         int retries = 0;
         while (retries < 3) {
@@ -116,11 +110,8 @@ void callbackDispatcher() {
                 .timeout(const Duration(seconds: 60));
 
             if (response.statusCode == 200) break;
-            debugPrint(
-              'Download failed with status: ${response.statusCode}. Retrying...',
-            );
           } catch (e) {
-            debugPrint('Download error: $e');
+            // Error
           }
           retries++;
           await Future.delayed(const Duration(seconds: 5));
@@ -131,21 +122,15 @@ void callbackDispatcher() {
           final file = File('${tempDir.path}/auto_wallpaper.$extension');
           await file.writeAsBytes(response.bodyBytes);
           finalPath = file.path;
-          debugPrint('File saved to: $finalPath');
         } else {
-          debugPrint('Failed to download file after retries.');
           return false;
         }
       } else {
         finalPath = downloadUrl;
-        debugPrint('Using local file path: $finalPath');
       }
 
       if (await File(finalPath).exists()) {
         try {
-          debugPrint(
-            'Setting static wallpaper via Native Platform Channel (Background)...',
-          );
           const platform = MethodChannel('com.amozea.wallpapers/wallpaper');
           final result = await platform.invokeMethod('setWallpaper', {
             'path': finalPath,
@@ -158,7 +143,6 @@ void callbackDispatcher() {
             final now = DateTime.now().millisecondsSinceEpoch;
             await prefs.setInt('lastAutoChange', now);
             await prefs.setInt('lastAutoChangeIndex', nextIndex);
-            debugPrint('--- WALLPAPER CHANGED SUCCESSFULLY ---');
 
             // Show Notification ONLY on SUCCESS
             const AndroidNotificationDetails
@@ -186,7 +170,6 @@ void callbackDispatcher() {
           final freq = prefs.getInt('autoChangeFrequency') ?? 86400;
           if (freq == 60) {
             final now = DateTime.now().millisecondsSinceEpoch;
-            debugPrint('Test mode: Scheduling next change in 60s...');
             Workmanager().registerOneOffTask(
               "oneOffAutoChange_${now + 60000}",
               autoChangeTask,
@@ -196,21 +179,18 @@ void callbackDispatcher() {
             );
           }
         } catch (e) {
-          debugPrint('Error setting wallpaper in background: $e');
           return true;
         }
       }
 
       return true;
     } catch (e) {
-      debugPrint('CRITICAL TASK ERROR: $e');
       return false;
     }
   });
 }
 
 void main() async {
-  debugPrint('--- APP STARTING ---');
   WidgetsFlutterBinding.ensureInitialized();
 
   // Only await essential local storage
